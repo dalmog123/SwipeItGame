@@ -3,7 +3,7 @@ import React from 'react';
 
 export default function Header({ score, timer, isInTutorial }) {
   return (
-    <div className="w-full bg-white shadow-md p-4 mb-8 fixed top-0">
+    <div className="w-full bg-white shadow-md p-2 sticky top-0 z-50">
       <div className="flex justify-between max-w-md mx-auto">
         <div className="text-xl">Score: {score}</div>
         {!isInTutorial && (

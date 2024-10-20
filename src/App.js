@@ -1,13 +1,11 @@
 // Importing necessary React features
 import { useState, useEffect, useCallback } from 'react';
 // Importing icons from lucide-react
-import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Circle, CircleDot } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Circle, CircleDot, X } from 'lucide-react';
 // Importing your custom components
 import Header from './components/Header';
 import GameOver from './components/GameOver';
 import Block from './components/Block';
-
-
 // Defining the game actions
 const actions = [
   { type: 'swipeLeft', icon: ArrowLeft, color: '#FF6B6B' },
@@ -15,7 +13,8 @@ const actions = [
   { type: 'swipeUp', icon: ArrowUp, color: '#45B7D1' },
   { type: 'swipeDown', icon: ArrowDown, color: '#96CEB4' },
   { type: 'tap', icon: Circle, color: '#FFBE0B' },
-  { type: 'doubleTap', icon: CircleDot, color: '#FF006E' }
+  { type: 'doubleTap', icon: CircleDot, color: '#FF006E' },
+  { type: 'avoid', icon: X, color: '#000000' }
 ];
 
 // Tutorial blocks
@@ -24,6 +23,7 @@ const tutorialBlocks = [
   { type: 'swipeLeft', icon: ArrowLeft, color: '#FF6B6B' },
   { type: 'doubleTap', icon: CircleDot, color: '#FF006E' }
 ];
+
 
 export default function SwipeGame() {
   const [gameState, setGameState] = useState({
@@ -67,7 +67,7 @@ export default function SwipeGame() {
 
   const spawnBlocks = useCallback(() => {
     const { blocks, score, isGameOver, isInTutorial, tutorialIndex, transitioning } = gameState;
-    
+
     if (isGameOver || transitioning) return;
 
     if (blocks.length === 0) {
@@ -98,15 +98,36 @@ export default function SwipeGame() {
     const interval = setInterval(() => {
       setGameState(prev => {
         const updatedTimer = prev.timer + 0.1;
-        const shouldGameOver = prev.blocks.some(
-          block => (Date.now() - block.createdAt) / 1000 >= (prev.score >= 500 ? 5 : 5.5)
+        const timeLimit = prev.score >= 500 ? 5 : 5.5;
+
+        // Check if any regular blocks have timed out
+        const shouldGameOver = prev.blocks.some(block =>
+          block.type !== 'avoid' &&
+          (Date.now() - block.createdAt) / 1000 >= timeLimit
         );
 
         if (shouldGameOver) {
           return { ...prev, isGameOver: true };
         }
 
-        return { ...prev, timer: updatedTimer };
+        // Handle expired avoid blocks and other updates
+        const currentTime = Date.now();
+        const expiredAvoidBlocks = prev.blocks.filter(block =>
+          block.type === 'avoid' &&
+          (currentTime - block.createdAt) / 1000 >= timeLimit
+        ).length;
+
+        const updatedBlocks = prev.blocks.filter(block =>
+          block.type !== 'avoid' ||
+          (currentTime - block.createdAt) / 1000 < timeLimit
+        );
+
+        return {
+          ...prev,
+          timer: updatedTimer,
+          blocks: updatedBlocks,
+          score: prev.score + (expiredAvoidBlocks * 10)
+        };
       });
     }, 100);
 
@@ -150,9 +171,8 @@ export default function SwipeGame() {
   const handleInteraction = useCallback((e, type, block) => {
     e.preventDefault();
     if (gameState.isGameOver) return;
-
     const point = e.touches?.[0] || e.changedTouches?.[0] || e;
-    
+
     if (type === 'start') {
       setInteractionState(prev => ({
         ...prev,
@@ -165,11 +185,15 @@ export default function SwipeGame() {
     } else if (type === 'end') {
       const start = interactionState.start;
       if (!start) return;
-
+      
       const deltaX = point.clientX - start.x;
       const deltaY = point.clientY - start.y;
       const deltaTime = Date.now() - start.time;
-
+      
+      if (block.type === 'avoid') {
+        setGameState(prev => ({ ...prev, isGameOver: true }));
+        return;
+      }
       if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
         const now = Date.now();
         
@@ -194,34 +218,33 @@ export default function SwipeGame() {
       } else if (deltaTime < 250) {
         const absX = Math.abs(deltaX);
         const absY = Math.abs(deltaY);
-        
+
         if (absX > absY && absX > 30) {
           if ((deltaX > 0 && block.type === 'swipeRight') ||
-              (deltaX < 0 && block.type === 'swipeLeft')) {
+            (deltaX < 0 && block.type === 'swipeLeft')) {
             handleSuccess(block.id);
           }
         } else if (absY > absX && absY > 30) {
           if ((deltaY > 0 && block.type === 'swipeDown') ||
-              (deltaY < 0 && block.type === 'swipeUp')) {
+            (deltaY < 0 && block.type === 'swipeUp')) {
             handleSuccess(block.id);
           }
         }
       }
-      
+
       setInteractionState(prev => ({ ...prev, start: null }));
     }
   }, [gameState.isGameOver, interactionState.start, interactionState.lastTapTime, handleSuccess]);
 
   return (
-    <div className="flex flex-col items-center h-screen bg-gray-100 touch-none select-none">
+    <div className="flex flex-col items-center min-h-screen bg-gray-100 touch-none select-none">
       <Header score={gameState.score} timer={gameState.timer} isInTutorial={gameState.isInTutorial} />
-
-      <div className="flex-1 flex flex-col items-center justify-center gap-4">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 pt-4">
         {gameState.isGameOver ? (
           <GameOver score={gameState.score} resetGame={resetGame} />
         ) : (
           gameState.blocks.map((block) => (
-            <Block 
+            <Block
               key={block.id}
               block={block}
               gameState={gameState}
@@ -233,11 +256,12 @@ export default function SwipeGame() {
 
       {!gameState.isGameOver && gameState.isInTutorial && gameState.blocks[0] && (
         <div className="fixed bottom-8 text-gray-600">
-          {gameState.blocks[0].type === 'doubleTap' ? 'Double Tap' : 
-           gameState.blocks[0].type === 'tap' ? 'Tap' : 
-           `Swipe ${gameState.blocks[0].type.replace('swipe', '')}`}
+          {gameState.blocks[0].type === 'doubleTap' ? 'Double Tap' :
+            gameState.blocks[0].type === 'tap' ? 'Tap' :
+              `Swipe ${gameState.blocks[0].type.replace('swipe', '')}`}
         </div>
       )}
     </div>
+
   );
 }
