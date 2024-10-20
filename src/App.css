@@ -36,3 +36,11 @@
     transform: rotate(360deg);
   }
 }
+.logo {
+  border-radius: 15px; /* Round the edges */
+  transition: transform 0.3s ease; /* Smooth transformation */
+}
+
+.logo:hover {
+  transform: scale(1.05); /* Slightly enlarge on hover */
+}

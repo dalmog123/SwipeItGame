@@ -1,8 +1,9 @@
 import React from 'react';
 
 export default function Block({ block, handleInteraction, isInTutorial }) {
+  // Check if the block should shake
   const shouldShake = !isInTutorial && (Date.now() - block.createdAt) / 1000 >= 4;
-  
+//   const blockHeight = (window.innerHeight) / 10;
   return (
     <div
       key={block.id}

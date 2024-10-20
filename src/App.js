@@ -185,18 +185,18 @@ export default function SwipeGame() {
     } else if (type === 'end') {
       const start = interactionState.start;
       if (!start) return;
-      
+
       const deltaX = point.clientX - start.x;
       const deltaY = point.clientY - start.y;
       const deltaTime = Date.now() - start.time;
-      
+
       if (block.type === 'avoid') {
         setGameState(prev => ({ ...prev, isGameOver: true }));
         return;
       }
       if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
         const now = Date.now();
-        
+
         if (block.type === 'doubleTap') {
           if (now - interactionState.lastTapTime < 300) {
             handleSuccess(block.id);
@@ -239,20 +239,30 @@ export default function SwipeGame() {
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-100 touch-none select-none">
       <Header score={gameState.score} timer={gameState.timer} isInTutorial={gameState.isInTutorial} />
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 pt-4">
-        {gameState.isGameOver ? (
-          <GameOver score={gameState.score} resetGame={resetGame} />
-        ) : (
-          gameState.blocks.map((block) => (
-            <Block
-              key={block.id}
-              block={block}
-              gameState={gameState}
-              handleInteraction={handleInteraction}
-            />
-          ))
-        )}
-      </div>
+      <div className="flex-1 flex flex-col items-center justify-center">
+    
+    {/* Container for GameOver */}
+    {gameState.isGameOver && (
+        <div className="flex flex-col items-center justify-center w-full">
+            <GameOver score={gameState.score} resetGame={resetGame} />
+        </div>
+    )}
+
+    {/* Container for Blocks */}
+    {!gameState.isGameOver && (
+        <div className="flex flex-col w-full gap-4 px-4 pt-4">
+            {gameState.blocks.map((block) => (
+                <Block
+                    key={block.id}
+                    block={block}
+                    gameState={gameState}
+                    handleInteraction={handleInteraction}
+                />
+            ))}
+        </div>
+    )}
+</div>
+
 
       {!gameState.isGameOver && gameState.isInTutorial && gameState.blocks[0] && (
         <div className="fixed bottom-8 text-gray-600">
