@@ -31,8 +31,8 @@ export default function GameOver({ score, resetGame }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-400 via-teal-300 to-green-500 p-6 overflow-hidden">
-      <div className="relative bg-gradient-to-br from-blue-300 via-teal-200 to-green-300 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-400 via-teal-300 to-green-500 p-8 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-blue-300 via-teal-200 to-green-300 rounded-3xl shadow-2xl p-8 mb-12 max-w-md w-full text-center">
         <img
           src={swipeItLogo}
           alt="Swipe It Game Logo"

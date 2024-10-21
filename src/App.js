@@ -49,7 +49,7 @@ export default function SwipeGame() {
       score: 0,
       timer: 0,
       isGameOver: false,
-      isInTutorial: true,
+      isInTutorial: false,
       tutorialIndex: 0,
       transitioning: false
     });
@@ -171,7 +171,7 @@ export default function SwipeGame() {
   }, [gameState.isInTutorial]);
 
   const handleInteraction = useCallback((e, type, block) => {
-    e.preventDefault();
+    // e.preventDefault(); // we have no idea what this does 
     if (gameState.isGameOver) return;
     const point = e.touches?.[0] || e.changedTouches?.[0] || e;
 
@@ -239,20 +239,25 @@ export default function SwipeGame() {
   }, [gameState.isGameOver, interactionState.start, interactionState.lastTapTime, handleSuccess]);
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-100 touch-none select-none">
-      <Header score={gameState.score} timer={gameState.timer} isInTutorial={gameState.isInTutorial} />
-      <div className="flex-1 flex flex-col items-center justify-center">
-    
-    {/* Container for GameOver */}
+  <div className='flex flex-col min-h-screen touch-none select-none'>
+
+{!gameState.isGameOver && ( <div className='flex'>
+   <Header score={gameState.score} timer={gameState.timer} isInTutorial={gameState.isInTutorial} />
+   </div>)}
+  
+
+   <div>
     {gameState.isGameOver && (
-        <div className="flex flex-col items-center justify-center w-full">
+        <div>
             <GameOver score={gameState.score} resetGame={resetGame} />
         </div>
     )}
+   </div>
+   
+   {!gameState.isGameOver &&(<div className='flex-1 flex flex-col items-center justify-center bg-gray-100'>
 
-    {/* Container for Blocks */}
-    {!gameState.isGameOver && (
-        <div className="flex flex-col w-full gap-4 px-4 pt-4">
+    <div>
+        <div className="flex flex-col gap-4 px-4 pt-4">
             {gameState.blocks.map((block) => (
                 <Block
                     key={block.id}
@@ -262,18 +267,19 @@ export default function SwipeGame() {
                 />
             ))}
         </div>
-    )}
-</div>
-
-
-      {!gameState.isGameOver && gameState.isInTutorial && gameState.blocks[0] && (
-        <div className="fixed bottom-8 text-gray-600">
+    </div>
+    <div className='pt-4'>
+      {gameState.isInTutorial && gameState.blocks[0] && (
+        <div className="flex text-xl text-gray-600">
           {gameState.blocks[0].type === 'doubleTap' ? 'Double Tap' :
             gameState.blocks[0].type === 'tap' ? 'Tap' :
               `Swipe ${gameState.blocks[0].type.replace('swipe', '')}`}
         </div>
       )}
     </div>
+   </div>)}
+   
 
+  </div>
   );
 }
