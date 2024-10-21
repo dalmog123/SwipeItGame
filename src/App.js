@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Circle, CircleDot, X } from 
 import Header from './components/Header';
 import GameOver from './components/GameOver';
 import Block from './components/Block';
+import './App.css';
 // Defining the game actions
 const actions = [
   { type: 'swipeLeft', icon: ArrowLeft, color: '#FF6B6B' },
@@ -35,7 +36,7 @@ export default function SwipeGame() {
     tutorialIndex: 0,
     transitioning: false
   });
-
+  
   const [interactionState, setInteractionState] = useState({
     start: null,
     lastTapTime: 0,
@@ -94,45 +95,46 @@ export default function SwipeGame() {
 
   useEffect(() => {
     if (gameState.isGameOver || gameState.isInTutorial) return;
-
+  
     const interval = setInterval(() => {
       setGameState(prev => {
         const updatedTimer = prev.timer + 0.1;
+  
+        // General time limit for non-avoid blocks
         const timeLimit = prev.score >= 500 ? 5 : 5.5;
-
+        // Shorter time limit for avoid blocks (2.5 seconds less)
+        const avoidBlockTimeLimit = timeLimit - 2.5;
+  
         // Check if any regular blocks have timed out
         const shouldGameOver = prev.blocks.some(block =>
           block.type !== 'avoid' &&
           (Date.now() - block.createdAt) / 1000 >= timeLimit
         );
-
+  
+        // If any regular block timed out, end the game
         if (shouldGameOver) {
           return { ...prev, isGameOver: true };
         }
-
-        // Handle expired avoid blocks and other updates
+  
         const currentTime = Date.now();
-        const expiredAvoidBlocks = prev.blocks.filter(block =>
-          block.type === 'avoid' &&
-          (currentTime - block.createdAt) / 1000 >= timeLimit
-        ).length;
-
+        
+        // Filter blocks that haven't timed out (considering the shorter lifespan for avoid blocks)
         const updatedBlocks = prev.blocks.filter(block =>
-          block.type !== 'avoid' ||
-          (currentTime - block.createdAt) / 1000 < timeLimit
+          (block.type === 'avoid' && (currentTime - block.createdAt) / 1000 < avoidBlockTimeLimit) ||
+          (block.type !== 'avoid' && (currentTime - block.createdAt) / 1000 < timeLimit)
         );
-
+  
         return {
           ...prev,
           timer: updatedTimer,
-          blocks: updatedBlocks,
-          score: prev.score + (expiredAvoidBlocks * 10)
+          blocks: updatedBlocks
         };
       });
     }, 100);
-
+  
     return () => clearInterval(interval);
   }, [gameState.isGameOver, gameState.isInTutorial]);
+  
 
   const handleSuccess = useCallback((blockId) => {
     setGameState(prev => {
