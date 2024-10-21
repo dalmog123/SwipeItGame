@@ -171,7 +171,7 @@ export default function SwipeGame() {
   }, [gameState.isInTutorial]);
 
   const handleInteraction = useCallback((e, type, block) => {
-    // e.preventDefault(); // we have no idea what this does 
+    e.preventDefault(); // we have no idea what this does 
     if (gameState.isGameOver) return;
     const point = e.touches?.[0] || e.changedTouches?.[0] || e;
 
