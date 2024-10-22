@@ -184,7 +184,7 @@ export default function GameOver({ score, resetGame , userId  }) {
       </div>
     </div>) : 
     <div>
-      <ScoreBoard onBack={handleBackButton}></ScoreBoard>
+      <ScoreBoard onBack={handleBackButton} currentUserId={userId}></ScoreBoard>
     </div>}
  
     </div>

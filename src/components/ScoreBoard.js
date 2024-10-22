@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, Award, Edit2, Check, X } from 'lucide-react'; // Import Edit icon
+import { ArrowLeft, Trophy, Medal, Award, Edit2, Check, X } from 'lucide-react';
 import { db } from '../firebase/firebase';
 import { getDocs, collection, doc, updateDoc } from 'firebase/firestore';
 
-export default function ScoreBoard({ onBack = () => {} }) {
+export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
   const [selectedPeriod, setSelectedPeriod] = useState('weekly');
   const [scores, setScores] = useState([]);
   const [newName, setNewName] = useState('');
-  const [editingId, setEditingId] = useState(null); // Track which player is being edited
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     const fetchScores = async () => {
@@ -17,9 +17,8 @@ export default function ScoreBoard({ onBack = () => {} }) {
         id: doc.id,
         ...doc.data(),
       }));
-
-      // Sort scores in descending order
-      fetchedScores.sort((a, b) => b.score - a.score); // Highest score first
+      // Sort scores by score in descending order
+      fetchedScores.sort((a, b) => b.score - a.score);
       setScores(fetchedScores);
     };
 
@@ -29,7 +28,7 @@ export default function ScoreBoard({ onBack = () => {} }) {
   const handleRename = async (id) => {
     if (!newName) return; // Prevent empty names
     try {
-      const scoreRef = doc(db, 'scores', id); // Create a reference to the specific document
+      const scoreRef = doc(db, 'scores', id); // Reference to the specific document
       await updateDoc(scoreRef, { player: newName }); // Update the player's name
       setScores(scores.map(score => (score.id === id ? { ...score, player: newName } : score)));
       setNewName(''); // Clear the input field
@@ -112,7 +111,7 @@ export default function ScoreBoard({ onBack = () => {} }) {
                       </span>
                     )}
                     <div className="ml-4 flex-grow">
-                      {editingId === score.id ? (
+                      {editingId === score.id && score.userId === currentUserId ? ( // Allow editing only for the current user's score
                         <div className="flex items-center space-x-2">
                           <input
                             type="text"
@@ -142,14 +141,16 @@ export default function ScoreBoard({ onBack = () => {} }) {
                       ) : (
                         <div className="flex items-center">
                           <span className="text-xl font-semibold text-gray-100">{score.player}</span>
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => startEditing(score.id, score.player)}
-                            className="ml-2 p-1 rounded-full text-gray-400 hover:text-gray-200 hover:bg-gray-700"
-                          >
-                            <Edit2 size={16} />
-                          </motion.button>
+                          {score.userId === currentUserId && ( // Show edit button only for current user's score
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => startEditing(score.id, score.player)}
+                              className="ml-2 p-1 rounded-full text-gray-400 hover:text-gray-200 hover:bg-gray-700"
+                            >
+                              <Edit2 size={16} />
+                            </motion.button>
+                          )}
                         </div>
                       )}
                     </div>
