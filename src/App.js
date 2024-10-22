@@ -27,6 +27,7 @@ const tutorialBlocks = [
 
 
 export default function SwipeGame() {
+  const [userId, setUserId] = useState(null);
   const [gameState, setGameState] = useState({
     blocks: [],
     score: 0,
@@ -36,6 +37,21 @@ export default function SwipeGame() {
     tutorialIndex: 0,
     transitioning: false
   });
+
+  useEffect(() => {
+    // Check if the user ID is already stored
+    const storedUserId = localStorage.getItem('userId');
+
+    if (storedUserId) {
+      // If exists, set it in the state
+      setUserId(storedUserId);
+    } else {
+      // Generate a new user ID
+      const newUserId = Math.random().toString(36).substr(2, 9);
+      setUserId(newUserId);
+      localStorage.setItem('userId', newUserId); // Store it in localStorage
+    }
+  }, []);
   
   const [interactionState, setInteractionState] = useState({
     start: null,
@@ -249,7 +265,7 @@ export default function SwipeGame() {
    <div>
     {gameState.isGameOver && (
         <div>
-            <GameOver score={gameState.score} resetGame={resetGame} />
+            <GameOver score={gameState.score} resetGame={resetGame} userId={userId} />
         </div>
     )}
    </div>

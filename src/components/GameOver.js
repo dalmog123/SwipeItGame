@@ -4,8 +4,10 @@ import confetti from 'canvas-confetti';
 import { BsFillBalloonHeartFill } from 'react-icons/bs'; // Import the balloon icon
 import { Trophy, ChevronRight } from 'lucide-react'
 import ScoreBoard from './ScoreBoard';
+import { db } from '../firebase/firebase';
+import { setDoc, getDoc, doc } from 'firebase/firestore';
 
-export default function GameOver({ score, resetGame }) {
+export default function GameOver({ score, resetGame , userId  }) {
   const [showScore, setShowScore] = useState(false);
   const [scoreBoard, setScoreBoard] = useState(false);
   const [floatingElements, setFloatingElements] = useState([
@@ -15,6 +17,48 @@ export default function GameOver({ score, resetGame }) {
     { icon: <BsFillBalloonHeartFill color="#000000" size={'6vh'} />, delay: 1.5, popped: false },  // Black balloon
   ]);
 
+  const saveScoreToFirebase = async () => {
+    try {
+      const scoreRef = doc(db, 'scores', userId); // Reference to the user's score document
+      const scoreDoc = await getDoc(scoreRef);
+      
+      // Generate a random name with digits if the document doesn't exist
+      let playerName;
+      if (!scoreDoc.exists()) {
+        const randomDigits = Math.floor(100 + Math.random() * 9000000);
+        playerName = 'PlayerName' + randomDigits; // Create a new player name
+        // Save the new score
+        await setDoc(scoreRef, {
+          userId: userId, // Store userId in the document
+          player: playerName,
+          score: score, // Initial score for a new player
+          date: new Date().toISOString(),
+        });
+        console.log('New player created and score saved successfully!');
+      } else {
+        // If the document exists, retrieve the existing score
+        const existingScore = scoreDoc.data().score;
+        playerName = scoreDoc.data().player; // Keep the existing player name
+  
+        // Only update if the new score is higher than the existing score
+        if (score > existingScore) {
+          await setDoc(scoreRef, {
+            score: score, // Update score only if it's higher
+            date: new Date().toISOString(),
+          }, { merge: true }); // Merge to retain other fields
+          console.log('High score updated successfully!');
+        } else {
+          console.log('Score not high enough to update.');
+        }
+      }
+    } catch (error) {
+      console.error('Error saving score: ', error);
+    }
+  };
+  
+  
+  
+
   useEffect(() => {
     const timer = setTimeout(() => setShowScore(true), 1000);
     confetti({
@@ -22,6 +66,9 @@ export default function GameOver({ score, resetGame }) {
       spread: 70,
       origin: { y: 0.6 },
     });
+
+    saveScoreToFirebase();
+
     return () => clearTimeout(timer);
   }, []);
 

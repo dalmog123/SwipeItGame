@@ -1,22 +1,53 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, Award } from 'lucide-react';
-
-const leaderboardData = [
-  { rank: 1, name: "Alex", score: 2500 },
-  { rank: 2, name: "Sam", score: 2350 },
-  { rank: 3, name: "Jordan", score: 2200 },
-  { rank: 4, name: "Taylor", score: 2100 },
-  { rank: 5, name: "Casey", score: 2000 },
-  { rank: 6, name: "Morgan", score: 1950 },
-  { rank: 7, name: "Jamie", score: 1900 },
-  { rank: 8, name: "Riley", score: 1850 },
-  { rank: 9, name: "Quinn", score: 1800 },
-  { rank: 10, name: "Avery", score: 1750 },
-];
+import { ArrowLeft, Trophy, Medal, Award, Edit2, Check, X } from 'lucide-react'; // Import Edit icon
+import { db } from '../firebase/firebase';
+import { getDocs, collection, doc, updateDoc } from 'firebase/firestore';
 
 export default function ScoreBoard({ onBack = () => {} }) {
   const [selectedPeriod, setSelectedPeriod] = useState('weekly');
+  const [scores, setScores] = useState([]);
+  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useState(null); // Track which player is being edited
+
+  useEffect(() => {
+    const fetchScores = async () => {
+      const querySnapshot = await getDocs(collection(db, 'scores'));
+      const fetchedScores = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Sort scores in descending order
+      fetchedScores.sort((a, b) => b.score - a.score); // Highest score first
+      setScores(fetchedScores);
+    };
+
+    fetchScores();
+  }, []);
+
+  const handleRename = async (id) => {
+    if (!newName) return; // Prevent empty names
+    try {
+      const scoreRef = doc(db, 'scores', id); // Create a reference to the specific document
+      await updateDoc(scoreRef, { player: newName }); // Update the player's name
+      setScores(scores.map(score => (score.id === id ? { ...score, player: newName } : score)));
+      setNewName(''); // Clear the input field
+      setEditingId(null); // Reset editing state
+    } catch (error) {
+      console.error("Error updating player name: ", error);
+    }
+  };
+
+  const startEditing = (id, currentName) => {
+    setEditingId(id);
+    setNewName(currentName);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setNewName('');
+  };
 
   const getRankIcon = (rank) => {
     switch (rank) {
@@ -32,14 +63,8 @@ export default function ScoreBoard({ onBack = () => {} }) {
   };
 
   return (
-    <div
-      className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-teal-500 to-green-600 p-4 sm:p-6 overflow-hidden"
-      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
-    >
-      <div
-        className="relative bg-gray-900 bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-6 sm:p-8 max-w-2xl w-full flex flex-col"
-        style={{ height: "95vh", paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-teal-500 to-green-600 p-4 sm:p-6 overflow-hidden">
+      <div className="relative bg-gray-900 bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-6 sm:p-8 max-w-2xl w-full flex flex-col" style={{ height: "95vh" }}>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -57,12 +82,11 @@ export default function ScoreBoard({ onBack = () => {} }) {
           {['daily', 'weekly', 'monthly'].map((period) => (
             <button
               key={period}
-              className={`flex items-center justify-center px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
                 selectedPeriod === period
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
-              style={{ minWidth: "10vw", maxWidth: "35vw" }} // More flexible width
               onClick={() => setSelectedPeriod(period)}
             >
               {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -70,28 +94,71 @@ export default function ScoreBoard({ onBack = () => {} }) {
           ))}
         </div>
 
-        {/* Scrollable leaderboard section */}
         <div className="flex-grow overflow-y-auto space-y-4">
-          {leaderboardData.map((entry, index) => (
+          {scores.map((score, index) => (
             <motion.div
-              key={entry.rank}
+              key={score.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
               className="flex items-center bg-gray-800 bg-opacity-50 rounded-2xl p-4 hover:bg-opacity-70 transition-colors"
             >
-              <div className="w-12 h-12 flex items-center justify-center text-2xl font-bold text-gray-200 mr-4">
-                {getRankIcon(entry.rank) || (
-                  <span className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-                    {entry.rank}
-                  </span>
-                )}
-              </div>
               <div className="flex-grow">
-                <div className="text-xl font-semibold text-gray-100">{entry.name}</div>
-                <div className="text-sm text-gray-400">Rank: #{entry.rank}</div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center flex-grow">
+                    {getRankIcon(index + 1) || (
+                      <span className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-gray-300">
+                        {index + 1}
+                      </span>
+                    )}
+                    <div className="ml-4 flex-grow">
+                      {editingId === score.id ? (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            className="bg-gray-700 text-gray-100 px-3 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                            placeholder={score.player}
+                            autoFocus
+                          />
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleRename(score.id)}
+                            className="p-1 rounded-full bg-green-500 text-white hover:bg-green-600"
+                          >
+                            <Check size={16} />
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={cancelEditing}
+                            className="p-1 rounded-full bg-red-500 text-white hover:bg-red-600"
+                          >
+                            <X size={16} />
+                          </motion.button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <span className="text-xl font-semibold text-gray-100">{score.player}</span>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => startEditing(score.id, score.player)}
+                            className="ml-2 p-1 rounded-full text-gray-400 hover:text-gray-200 hover:bg-gray-700"
+                          >
+                            <Edit2 size={16} />
+                          </motion.button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-3xl font-bold text-blue-300 ml-4">
+                    {score.score.toLocaleString()}
+                  </div>
+                </div>
               </div>
-              <div className="text-3xl font-bold text-blue-300">{entry.score.toLocaleString()}</div>
             </motion.div>
           ))}
         </div>
