@@ -32,42 +32,46 @@ export default function ScoreBoard({ onBack = () => {} }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-teal-500 to-green-600 p-4 sm:p-6 overflow-hidden">
-      <div className="relative bg-gray-900 bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-6 sm:p-8 max-w-2xl w-full flex flex-col" style={{ height: "95vh" }}>
+    <div
+      className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-teal-500 to-green-600 p-4 sm:p-6 overflow-hidden"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div
+        className="relative bg-gray-900 bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-6 sm:p-8 max-w-2xl w-full flex flex-col"
+        style={{ height: "95vh", paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="absolute top-4 left-4 p-2 rounded-full bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+          className="fixed top-4 left-4 p-2 rounded-full bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors z-50"
           onClick={onBack}
         >
           <ArrowLeft size={24} />
         </motion.button>
 
         <h1 className="font-bold text-center text-gray-100 mb-8" style={{ fontSize: 'clamp(1.5rem, 8vw, 4rem)' }}>
-         Leaderboard
+          Leaderboard
         </h1>
-
 
         <div className="flex justify-center space-x-2 mb-4">
           {['daily', 'weekly', 'monthly'].map((period) => (
-          <button
-          key={period}
-          className={`flex items-center justify-center px-6 py-2 rounded-full text-sm font-medium transition-colors ${
-          selectedPeriod === period
-           ? 'bg-blue-500 text-white'
-           : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-          }`}
-          style={{ minWidth: "10vw", maxWidth: "35vw" }}  // More flexible width
-          onClick={() => setSelectedPeriod(period)}
-          >
-         {period.charAt(0).toUpperCase() + period.slice(1)}
-          </button>
+            <button
+              key={period}
+              className={`flex items-center justify-center px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedPeriod === period
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+              style={{ minWidth: "10vw", maxWidth: "35vw" }} // More flexible width
+              onClick={() => setSelectedPeriod(period)}
+            >
+              {period.charAt(0).toUpperCase() + period.slice(1)}
+            </button>
           ))}
         </div>
 
-
         {/* Scrollable leaderboard section */}
-        <div className="flex-grow overflow-y-auto space-y-4"> {/* Ensures it takes available space */}
+        <div className="flex-grow overflow-y-auto space-y-4">
           {leaderboardData.map((entry, index) => (
             <motion.div
               key={entry.rank}
