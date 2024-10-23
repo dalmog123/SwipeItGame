@@ -206,6 +206,7 @@ export default function GameOver({ score, resetGame , userId  }) {
                 cursor: "grab",
                 alignSelf: "center"
               }}
+              onClick={()=> resetGame()}
             >
               Swipe Again!
             </motion.button>
