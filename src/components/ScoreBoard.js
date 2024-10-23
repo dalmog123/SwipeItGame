@@ -26,7 +26,7 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
   }, []);
 
   const handleRename = async (id) => {
-    if (!newName) return; // Prevent empty names
+    if (!newName || newName.length > 12) return; // Prevent empty names or names longer than 12 characters
     try {
       const scoreRef = doc(db, 'scores', id); // Reference to the specific document
       await updateDoc(scoreRef, { player: newName }); // Update the player's name
@@ -35,6 +35,16 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
       setEditingId(null); // Reset editing state
     } catch (error) {
       console.error("Error updating player name: ", error);
+    }
+  };
+
+  const handleNameChange = (e) => {
+    const value = e.target.value;
+    // Regex to allow only alphanumeric characters and underscores
+    const regex = /^[a-zA-Z0-9_]*$/; 
+    // Set new name only if it matches the regex and is not longer than 12 characters
+    if (value.length <= 15 && regex.test(value)) {
+      setNewName(value);
     }
   };
 
@@ -116,7 +126,7 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                           <input
                             type="text"
                             value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
+                            onChange={handleNameChange} // Use the new handler here
                             className="bg-gray-700 text-gray-100 px-3 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                             placeholder={score.player}
                             autoFocus

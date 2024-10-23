@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { BsFillBalloonHeartFill } from 'react-icons/bs'; // Import the balloon icon
-import { Trophy, ChevronRight } from 'lucide-react'
+import { Trophy, ChevronRight, ChevronLeft, ChevronUp, ChevronDown } from 'lucide-react';
 import ScoreBoard from './ScoreBoard';
 import { db } from '../firebase/firebase';
 import { setDoc, getDoc, doc } from 'firebase/firestore';
@@ -10,12 +10,14 @@ import { setDoc, getDoc, doc } from 'firebase/firestore';
 export default function GameOver({ score, resetGame , userId  }) {
   const [showScore, setShowScore] = useState(false);
   const [scoreBoard, setScoreBoard] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState(null);
   const [floatingElements, setFloatingElements] = useState([
     { icon: <BsFillBalloonHeartFill color="#FF6B6B" size={'6vh'} />, delay: 0, popped: false },  // Red balloon
     { icon: <BsFillBalloonHeartFill color="#FF006E" size={'6vh'} />, delay: 0.5, popped: false }, // Teal balloon
     { icon: <BsFillBalloonHeartFill color="#FFBE0B" size={'6vh'} />, delay: 1, popped: false },   // Yellow balloon
     { icon: <BsFillBalloonHeartFill color="#000000" size={'6vh'} />, delay: 1.5, popped: false },  // Black balloon
   ]);
+  const [interactionState, setInteractionState] = useState({ start: null });
 
   const saveScoreToFirebase = async () => {
     try {
@@ -26,7 +28,7 @@ export default function GameOver({ score, resetGame , userId  }) {
       let playerName;
       if (!scoreDoc.exists()) {
         const randomDigits = Math.floor(100 + Math.random() * 9000000);
-        playerName = 'PlayerName' + randomDigits; // Create a new player name
+        playerName = 'Player' + randomDigits; // Create a new player name
         // Save the new score
         await setDoc(scoreRef, {
           userId: userId, // Store userId in the document
@@ -87,6 +89,48 @@ export default function GameOver({ score, resetGame , userId  }) {
     setScoreBoard(false)
   }
 
+  const handleSwipe = useCallback((e, type) => {
+    if (type === 'start') {
+      setInteractionState(prev => ({
+        ...prev,
+        start: {
+          x: e.clientX,
+          y: e.clientY,
+          time: Date.now()
+        }
+      }));
+    } else if (type === 'end') {
+      const start = interactionState.start;
+      if (!start) return;
+
+      const deltaX = e.clientX - start.x;
+      const deltaY = e.clientY - start.y;
+      const deltaTime = Date.now() - start.time;
+
+      if (deltaTime < 250) {
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        if (absX > absY && absX > 30) {
+          setSwipeDirection(deltaX > 0 ? 'right' : 'left');
+        } else if (absY > absX && absY > 30) {
+          setSwipeDirection(deltaY > 0 ? 'down' : 'up');
+        }
+      }
+
+      setInteractionState(prev => ({ ...prev, start: null }));
+    }
+  }, [interactionState.start]);
+
+  useEffect(() => {
+    if (swipeDirection) {
+      const timer = setTimeout(() => {
+        resetGame();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [swipeDirection, resetGame]);
+
   return (
     <div>
       {!scoreBoard ? (   <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-400 via-teal-300 to-green-500 p-4 sm:p-8 overflow-hidden">
@@ -144,19 +188,27 @@ export default function GameOver({ score, resetGame , userId  }) {
 
 
         <motion.button
-          whileHover={{ scale: 1.2 }}
-          whileTap={{ scale: 0.95 }}
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="px-6 py-2 sm:px-8 sm:py-3 bg-gradient-to-r from-green-500 to-blue-700 text-white rounded-full text-lg sm:text-4xl font-bold shadow-lg hover:shadow-xl transition duration-30 ease-in-out mb-4 sm:mb-8"
-          onClick={resetGame}
-          style={{
-            marginBottom: 'env(safe-area-inset-bottom)', // Add this to ensure button isn't hidden behind the bottom bar
-            width:"80%"
-          }}
-        >
-          Swipe Again!
-        </motion.button>
+              onTouchStart={(e) => handleSwipe(e.touches[0], 'start')}
+              onTouchEnd={(e) => handleSwipe(e.changedTouches[0], 'end')}
+              onMouseDown={(e) => handleSwipe(e, 'start')}
+              onMouseUp={(e) => handleSwipe(e, 'end')}
+              onMouseLeave={(e) => handleSwipe(e, 'end')}
+              animate={swipeDirection ? { 
+                x: swipeDirection === 'left' ? '-100vw' : swipeDirection === 'right' ? '100vw' : 0,
+                y: swipeDirection === 'up' ? '-100vh' : swipeDirection === 'down' ? '100vh' : 0,
+                opacity: swipeDirection ? 0 : 1
+              } : { scale: [1, 1.2, 1] }}
+              transition={swipeDirection ? { duration: 0.5 } : { repeat: Infinity, duration: 2 }}
+              className="px-6 py-2 sm:px-8 sm:py-3 bg-gradient-to-r from-green-500 to-blue-700 text-white rounded-full text-lg sm:text-4xl font-bold shadow-lg hover:shadow-xl transition duration-300 ease-in-out mb-4 sm:mb-8"
+              style={{
+                marginBottom: 'env(safe-area-inset-bottom)',
+                width: "80%",
+                cursor: "grab",
+                alignSelf: "center"
+              }}
+            >
+              Swipe Again!
+            </motion.button>
 
         {floatingElements.map((el, index) => (
           !el.popped && (
@@ -186,7 +238,6 @@ export default function GameOver({ score, resetGame , userId  }) {
     <div>
       <ScoreBoard onBack={handleBackButton} currentUserId={userId}></ScoreBoard>
     </div>}
- 
     </div>
   );
 }
