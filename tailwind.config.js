@@ -5,12 +5,22 @@ module.exports = {
     extend: {
       animation: {
         shake: 'shake 0.15s linear infinite',
+        swipeIn: 'swipeIn 0.5s ease-out forwards',
+        swipeOut: 'swipeOut 0.5s ease-out forwards',
       },
       keyframes: {
         shake: {
           '0%, 100%': { transform: 'translateX(0)' },
           '25%': { transform: 'translateX(-5px)' },
           '75%': { transform: 'translateX(5px)' },
+        },
+        swipeIn: {
+          '0%': { transform: 'translateX(-100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        swipeOut: {
+          '0%': { transform: 'translateX(0)', opacity: '1' },
+          '100%': { transform: 'translateX(100%)', opacity: '0' },
         },
       },
     },

@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { BsFillBalloonHeartFill } from 'react-icons/bs'; // Import the balloon icon
-import { Trophy, ChevronRight, ChevronLeft, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trophy, ChevronRight} from 'lucide-react';
 import ScoreBoard from './ScoreBoard';
 import { db } from '../firebase/firebase';
 import { setDoc, getDoc, doc } from 'firebase/firestore';
+import Achievement from './Achievements';
+import FloatingBalloon from './FloatingBalloons';
 
 export default function GameOver({ score, resetGame , userId  }) {
   const [showScore, setShowScore] = useState(false);
@@ -17,6 +19,52 @@ export default function GameOver({ score, resetGame , userId  }) {
     { icon: <BsFillBalloonHeartFill color="#FFBE0B" size={'6vh'} />, delay: 1, popped: false },   // Yellow balloon
     { icon: <BsFillBalloonHeartFill color="#000000" size={'6vh'} />, delay: 1.5, popped: false },  // Black balloon
   ]);
+  const [balloonsPoppedCount, setBalloonsPoppedCount] = useState(0);
+  const [coins, setCoins] = useState(0);
+  const [achievements, setAchievements] = useState([
+    {
+      id: 'balloon-popper',
+      title: 'Balloon Popper',
+      description: 'Pop 20 balloons',
+      coinReward: 500,
+      isCompleted: false,
+      progress: 0,
+      total: 20,
+    },
+    {
+      id: 'high-scorer',
+      title: 'High Scorer',
+      description: 'Reach a score of 2000 points',
+      coinReward: 1000,
+      isCompleted: false,
+      progress: score,
+      total: 2000,
+    },
+    {
+      id: 'speed-demon',
+      title: 'Speed Demon',
+      description: 'Complete 50 actions in under 30 seconds',
+      coinReward: 750,
+      isCompleted: false,
+    },
+    {
+      id: 'perfectionist',
+      title: 'Perfectionist',
+      description: 'Get a perfect score on 5 consecutive levels',
+      coinReward: 2000,
+      isCompleted: false,
+    },
+    {
+      id: 'coin-collector',
+      title: 'Coin Collector',
+      description: 'Collect 10,000 coins',
+      coinReward: 5000,
+      isCompleted: false,
+      progress: coins,
+      total: 10000,
+    },
+  ]);
+
   const [interactionState, setInteractionState] = useState({ start: null });
 
   const saveScoreToFirebase = async () => {
@@ -74,11 +122,72 @@ export default function GameOver({ score, resetGame , userId  }) {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    // Load the balloonsPoppedCount and achievements from localStorage on component mount
+    const savedBalloonsPoppedCount = localStorage.getItem('balloonsPoppedCount');
+    const savedAchievements = JSON.parse(localStorage.getItem('achievements'));
+
+    if (savedBalloonsPoppedCount) {
+      setBalloonsPoppedCount(Number(savedBalloonsPoppedCount));
+    }
+
+    if (savedAchievements) {
+      setAchievements(savedAchievements);
+    }
+  }, []); // This runs only once when the component mounts
+
+  // Save balloonsPoppedCount to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('balloonsPoppedCount', balloonsPoppedCount);
+  }, [balloonsPoppedCount]);
+
+  // Save achievements to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('achievements', JSON.stringify(achievements));
+  }, [achievements]);
+
+
+  useEffect(() => {
+    setAchievements(prevAchievements => 
+      prevAchievements.map(achievement => {
+        if (achievement.id === 'balloon-popper') {
+          const isCompleted = balloonsPoppedCount >= 20;
+          const progress = Math.min(balloonsPoppedCount, 20);
+
+          if (!achievement.isCompleted && isCompleted) {
+            setCoins(prevCoins => prevCoins + 500); // Award coins on first completion
+          }
+
+          // Only update if something actually changed
+          return {
+            ...achievement,
+            isCompleted,
+            progress,
+          };
+        }
+        if(achievement.id === 'high-scorer'){
+          const isCompleted = score >= 2000;
+          const progress = score
+          if (!achievement.isCompleted && isCompleted) {
+            setCoins(prevCoins => prevCoins + 1000); // Award coins on first completion
+          }
+          return {
+            ...achievement,
+            isCompleted,
+            progress,
+          };
+        }
+        return achievement;
+      })
+    );
+  }, [balloonsPoppedCount]);
+
   // Handle popping a balloon
   const handlePopBalloon = (index) => {
     const newBalloons = [...floatingElements];
     newBalloons[index].popped = true; // Mark the balloon as popped
     setFloatingElements(newBalloons); // Update the state
+    setBalloonsPoppedCount(prevCount => prevCount + 1);
   };
 
   const handleScoreBoard = ()=>{
@@ -134,8 +243,9 @@ export default function GameOver({ score, resetGame , userId  }) {
   return (
     <div>
       {!scoreBoard ? (   <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-400 via-teal-300 to-green-500 p-4 sm:p-8 overflow-hidden">
+      <Achievement achievements={achievements} coins={coins} />
       <div className="relative bg-gradient-to-br from-blue-300 via-teal-200 to-green-300 rounded-3xl shadow-2xl p-4 sm:p-8 mb-8 sm:mb-12 max-w-xs sm:max-w-md w-full text-center">
-        <img
+        {/* <img
           src={`${process.env.PUBLIC_URL}/swipeitlogo.png`} 
           alt="Swipe It Game Logo"
           className="mx-auto mb-4 sm:mb-6"
@@ -146,7 +256,7 @@ export default function GameOver({ score, resetGame , userId  }) {
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
             transition: 'transform 0.3s ease',
           }}
-        />
+        /> */}
 
         <motion.h1
           initial={{ scale: 0 }}
@@ -211,29 +321,17 @@ export default function GameOver({ score, resetGame , userId  }) {
               Swipe Again!
             </motion.button>
 
-        {floatingElements.map((el, index) => (
-          !el.popped && (
-            <motion.div
-              key={index}
-              className="absolute"
-              initial={{ y: '100vh' }}
-              animate={{ y: '-100vh' }}
-              transition={{
-                duration: 10,
-                repeat: Infinity,
-                delay: el.delay,
-                ease: 'linear',
-              }}
-              style={{
-                left: `${29 * index}%`,
-                filter: 'blur(1px)',
-              }}
-              onClick={() => handlePopBalloon(index)}
-            >
-              {el.icon}
-            </motion.div>
-          )
-        ))}
+            {floatingElements.map((el, index) => (
+              !el.popped && (
+                <FloatingBalloon
+                  key={index}
+                  icon={el.icon}
+                  delay={el.delay}
+                  index={index}
+                  onPop={() => handlePopBalloon(index)} // Pass the onPop handler
+                />
+              )
+            ))}
       </div>
     </div>) : 
     <div>
