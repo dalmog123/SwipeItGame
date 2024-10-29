@@ -13,26 +13,47 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
 
   useEffect(() => {
     const fetchScores = async () => {
-      const querySnapshot = await getDocs(collection(db, "scores"));
-      const fetchedScores = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      // Sort scores by score in descending order
-      fetchedScores.sort((a, b) => b.score - a.score);
-      setScores(fetchedScores);
+      try {
+        // Fetch from both collections
+        const scoresSnapshot = await getDocs(collection(db, "scores"));
+        const usersSnapshot = await getDocs(collection(db, "users"));
 
-      // After setting scores, scroll to user's position
-      const userIndex = fetchedScores.findIndex(
-        (score) => score.userId === currentUserId
-      );
-      if (userIndex !== -1 && scoreRef.current) {
-        setTimeout(() => {
-          scoreRef.current.children[userIndex]?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }, 500); // Small delay to ensure rendering is complete
+        // Process old scores
+        const oldScores = scoresSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // Process new scores from users collection
+        const newScores = usersSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          userId: doc.id, // In users collection, document ID is the userId
+          player: doc.data().player || doc.data().username || "Unknown Player",
+          score: doc.data().highScore || 0,
+        }));
+
+        // Merge both arrays
+        const allScores = [...oldScores, ...newScores];
+
+        // Sort all scores by score in descending order
+        newScores.sort((a, b) => b.score - a.score);
+
+        setScores(newScores);
+
+        // Scroll to user's position (existing code)
+        const userIndex = allScores.findIndex(
+          (score) => score.userId === currentUserId
+        );
+        if (userIndex !== -1 && scoreRef.current) {
+          setTimeout(() => {
+            scoreRef.current.children[userIndex]?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          }, 500);
+        }
+      } catch (error) {
+        console.error("Error fetching scores:", error);
       }
     };
 
@@ -40,17 +61,29 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
   }, [currentUserId]);
 
   const handleRename = async (id) => {
-    if (!newName || newName.length > 12) return; // Prevent empty names or names longer than 12 characters
+    if (!newName || newName.length > 15) return;
     try {
-      const scoreRef = doc(db, "scores", id); // Reference to the specific document
-      await updateDoc(scoreRef, { player: newName }); // Update the player's name
+      // Check which collection the score belongs to
+      const isNewUser = scores.find((score) => score.id === id)?.userId === id;
+      const collectionName = isNewUser ? "users" : "scores";
+
+      const docRef = doc(db, collectionName, id);
+
+      // Update based on collection type
+      if (isNewUser) {
+        await updateDoc(docRef, { username: newName });
+      } else {
+        await updateDoc(docRef, { player: newName });
+      }
+
+      // Update local state
       setScores(
         scores.map((score) =>
           score.id === id ? { ...score, player: newName } : score
         )
       );
-      setNewName(""); // Clear the input field
-      setEditingId(null); // Reset editing state
+      setNewName("");
+      setEditingId(null);
     } catch (error) {
       console.error("Error updating player name: ", error);
     }
@@ -90,9 +123,9 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-teal-500 to-green-600 p-4 sm:p-6 overflow-hidden">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-teal-500 to-green-600 p-2 sm:p-4 md:p-6 overflow-hidden">
       <div
-        className="relative bg-gray-900 bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-6 sm:p-8 max-w-2xl w-full flex flex-col"
+        className="relative bg-gray-900 bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-3 sm:p-6 md:p-8 max-w-2xl w-full flex flex-col"
         style={{ height: "95vh" }}
       >
         <motion.button
@@ -105,17 +138,17 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
         </motion.button>
 
         <h1
-          className="font-bold text-center text-gray-100 mb-8"
-          style={{ fontSize: "clamp(1.5rem, 8vw, 4rem)" }}
+          className="font-bold text-center text-gray-100 mb-4 sm:mb-8"
+          style={{ fontSize: "clamp(1.2rem, 5vw, 4rem)" }}
         >
           Leaderboard
         </h1>
 
-        <div className="flex justify-center space-x-2 mb-4">
+        <div className="flex justify-center space-x-1 sm:space-x-2 mb-4">
           {["daily", "weekly", "monthly"].map((period) => (
             <button
               key={period}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+              className={`px-2 sm:px-6 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                 selectedPeriod === period
                   ? "bg-blue-500 text-white"
                   : "bg-gray-700 text-gray-300 hover:bg-gray-600"
@@ -127,16 +160,19 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
           ))}
         </div>
 
-        <div className="flex-grow overflow-y-auto space-y-4" ref={scoreRef}>
+        <div
+          className="flex-grow overflow-y-auto space-y-2 sm:space-y-4"
+          ref={scoreRef}
+        >
           {scores.map((score, index) => (
             <motion.div
               key={score.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className={`flex items-center rounded-2xl p-4 transition-colors ${
+              className={`flex items-center rounded-2xl p-2 sm:p-4 transition-colors ${
                 score.userId === currentUserId
-                  ? "bg-blue-600 bg-opacity-50 hover:bg-opacity-70" // Highlighted style for current user
+                  ? "bg-blue-600 bg-opacity-50 hover:bg-opacity-70"
                   : "bg-gray-800 bg-opacity-50 hover:bg-opacity-70"
               }`}
             >
@@ -144,19 +180,19 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-grow">
                     {getRankIcon(index + 1) || (
-                      <span className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-gray-300">
+                      <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 text-sm sm:text-base">
                         {index + 1}
                       </span>
                     )}
-                    <div className="ml-4 flex-grow">
+                    <div className="ml-2 sm:ml-4 flex-grow">
                       {editingId === score.id &&
-                      score.userId === currentUserId ? ( // Allow editing only for the current user's score
-                        <div className="flex items-center space-x-2">
+                      score.userId === currentUserId ? (
+                        <div className="flex items-center space-x-1 sm:space-x-2">
                           <input
                             type="text"
                             value={newName}
-                            onChange={handleNameChange} // Use the new handler here
-                            className="bg-gray-700 text-gray-100 px-3 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                            onChange={handleNameChange}
+                            className="bg-gray-700 text-gray-100 px-2 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-sm sm:text-base"
                             placeholder={score.player}
                             autoFocus
                           />
@@ -179,10 +215,10 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                         </div>
                       ) : (
                         <div className="flex items-center">
-                          <span className="text-xl font-semibold text-gray-100">
+                          <span className="text-base sm:text-xl font-semibold text-gray-100">
                             {score.player}
                           </span>
-                          {score.userId === currentUserId && ( // Show edit button only for current user's score
+                          {score.userId === currentUserId && (
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
@@ -198,7 +234,7 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                       )}
                     </div>
                   </div>
-                  <div className="text-3xl font-bold text-blue-300 ml-4">
+                  <div className="text-xl sm:text-3xl font-bold text-blue-300 ml-2 sm:ml-4">
                     {score.score.toLocaleString()}
                   </div>
                 </div>

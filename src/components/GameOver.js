@@ -485,17 +485,25 @@ export default function GameOver({ score, resetGame, userId }) {
             claimedRewards: {},
             balloonsPoppedCount: 0,
             gamesPlayed: 0,
+            userId: userId,
+            username: `Player${Math.floor(Math.random() * 9999999)}`,
+            createdAt: new Date().toISOString(),
+            lastPlayed: new Date().toISOString(),
           };
           console.log("Initializing user data:", initialData);
           await setUserData(userId, initialData);
         } else {
-          // Validate existing data
-          const updates = {};
+          const updates = {
+            lastPlayed: new Date().toISOString(),
+          };
+
           if (isNaN(userData.coins)) updates.coins = 0;
           if (isNaN(userData.totalCoinsEarned)) updates.totalCoinsEarned = 0;
+          if (!userData.username)
+            updates.username = `Player${Math.floor(Math.random() * 10000)}`;
 
           if (Object.keys(updates).length > 0) {
-            console.log("Fixing invalid coin values:", updates);
+            console.log("Updating user data:", updates);
             await updateUserData(userId, updates);
           }
         }
