@@ -1,37 +1,55 @@
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, Award, Edit2, Check, X } from 'lucide-react';
-import { db } from '../firebase/firebase';
-import { getDocs, collection, doc, updateDoc } from 'firebase/firestore';
+import { useEffect, useState, useRef } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Trophy, Medal, Award, Edit2, Check, X } from "lucide-react";
+import { db } from "../firebase/firebase";
+import { getDocs, collection, doc, updateDoc } from "firebase/firestore";
 
 export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
-  const [selectedPeriod, setSelectedPeriod] = useState('weekly');
+  const [selectedPeriod, setSelectedPeriod] = useState("weekly");
   const [scores, setScores] = useState([]);
-  const [newName, setNewName] = useState('');
+  const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const scoreRef = useRef(null);
 
   useEffect(() => {
     const fetchScores = async () => {
-      const querySnapshot = await getDocs(collection(db, 'scores'));
-      const fetchedScores = querySnapshot.docs.map(doc => ({
+      const querySnapshot = await getDocs(collection(db, "scores"));
+      const fetchedScores = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
       // Sort scores by score in descending order
       fetchedScores.sort((a, b) => b.score - a.score);
       setScores(fetchedScores);
+
+      // After setting scores, scroll to user's position
+      const userIndex = fetchedScores.findIndex(
+        (score) => score.userId === currentUserId
+      );
+      if (userIndex !== -1 && scoreRef.current) {
+        setTimeout(() => {
+          scoreRef.current.children[userIndex]?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }, 500); // Small delay to ensure rendering is complete
+      }
     };
 
     fetchScores();
-  }, []);
+  }, [currentUserId]);
 
   const handleRename = async (id) => {
     if (!newName || newName.length > 12) return; // Prevent empty names or names longer than 12 characters
     try {
-      const scoreRef = doc(db, 'scores', id); // Reference to the specific document
+      const scoreRef = doc(db, "scores", id); // Reference to the specific document
       await updateDoc(scoreRef, { player: newName }); // Update the player's name
-      setScores(scores.map(score => (score.id === id ? { ...score, player: newName } : score)));
-      setNewName(''); // Clear the input field
+      setScores(
+        scores.map((score) =>
+          score.id === id ? { ...score, player: newName } : score
+        )
+      );
+      setNewName(""); // Clear the input field
       setEditingId(null); // Reset editing state
     } catch (error) {
       console.error("Error updating player name: ", error);
@@ -41,7 +59,7 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
   const handleNameChange = (e) => {
     const value = e.target.value;
     // Regex to allow only alphanumeric characters and underscores
-    const regex = /^[a-zA-Z0-9_]*$/; 
+    const regex = /^[a-zA-Z0-9_]*$/;
     // Set new name only if it matches the regex and is not longer than 12 characters
     if (value.length <= 15 && regex.test(value)) {
       setNewName(value);
@@ -55,7 +73,7 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
 
   const cancelEditing = () => {
     setEditingId(null);
-    setNewName('');
+    setNewName("");
   };
 
   const getRankIcon = (rank) => {
@@ -73,7 +91,10 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-teal-500 to-green-600 p-4 sm:p-6 overflow-hidden">
-      <div className="relative bg-gray-900 bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-6 sm:p-8 max-w-2xl w-full flex flex-col" style={{ height: "95vh" }}>
+      <div
+        className="relative bg-gray-900 bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-6 sm:p-8 max-w-2xl w-full flex flex-col"
+        style={{ height: "95vh" }}
+      >
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -83,18 +104,21 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
           <ArrowLeft size={24} />
         </motion.button>
 
-        <h1 className="font-bold text-center text-gray-100 mb-8" style={{ fontSize: 'clamp(1.5rem, 8vw, 4rem)' }}>
+        <h1
+          className="font-bold text-center text-gray-100 mb-8"
+          style={{ fontSize: "clamp(1.5rem, 8vw, 4rem)" }}
+        >
           Leaderboard
         </h1>
 
         <div className="flex justify-center space-x-2 mb-4">
-          {['daily', 'weekly', 'monthly'].map((period) => (
+          {["daily", "weekly", "monthly"].map((period) => (
             <button
               key={period}
               className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
                 selectedPeriod === period
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
               }`}
               onClick={() => setSelectedPeriod(period)}
             >
@@ -103,14 +127,18 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
           ))}
         </div>
 
-        <div className="flex-grow overflow-y-auto space-y-4">
+        <div className="flex-grow overflow-y-auto space-y-4" ref={scoreRef}>
           {scores.map((score, index) => (
             <motion.div
               key={score.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="flex items-center bg-gray-800 bg-opacity-50 rounded-2xl p-4 hover:bg-opacity-70 transition-colors"
+              className={`flex items-center rounded-2xl p-4 transition-colors ${
+                score.userId === currentUserId
+                  ? "bg-blue-600 bg-opacity-50 hover:bg-opacity-70" // Highlighted style for current user
+                  : "bg-gray-800 bg-opacity-50 hover:bg-opacity-70"
+              }`}
             >
               <div className="flex-grow">
                 <div className="flex items-center justify-between">
@@ -121,7 +149,8 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                       </span>
                     )}
                     <div className="ml-4 flex-grow">
-                      {editingId === score.id && score.userId === currentUserId ? ( // Allow editing only for the current user's score
+                      {editingId === score.id &&
+                      score.userId === currentUserId ? ( // Allow editing only for the current user's score
                         <div className="flex items-center space-x-2">
                           <input
                             type="text"
@@ -150,12 +179,16 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                         </div>
                       ) : (
                         <div className="flex items-center">
-                          <span className="text-xl font-semibold text-gray-100">{score.player}</span>
+                          <span className="text-xl font-semibold text-gray-100">
+                            {score.player}
+                          </span>
                           {score.userId === currentUserId && ( // Show edit button only for current user's score
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
-                              onClick={() => startEditing(score.id, score.player)}
+                              onClick={() =>
+                                startEditing(score.id, score.player)
+                              }
                               className="ml-2 p-1 rounded-full text-gray-400 hover:text-gray-200 hover:bg-gray-700"
                             >
                               <Edit2 size={16} />

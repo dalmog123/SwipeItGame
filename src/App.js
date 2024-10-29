@@ -1,30 +1,71 @@
 // Importing necessary React features
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 // Importing icons from lucide-react
-import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Circle, CircleDot, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  Circle,
+  CircleDot,
+  X,
+  Heart,
+  CircleDollarSign,
+} from "lucide-react";
 // Importing your custom components
-import Header from './components/Header';
-import GameOver from './components/GameOver';
-import Block from './components/Block';
-import './App.css';
+import Header from "./components/Header";
+import GameOver from "./components/GameOver";
+import Block from "./components/Block";
+import "./App.css";
+// Importing shop-related API functions
+import {
+  getShopItems,
+  consumeExtraLife,
+  consumeDoubleScore,
+  addShopItems,
+  listenToShopItems,
+} from "./api/shopAPI";
+import { updateCoinsAndAchievements } from "./api/gameoverAPI";
 // Defining the game actions
 const actions = [
-  { type: 'swipeLeft', icon: ArrowLeft, color: '#FF6B6B' },
-  { type: 'swipeRight', icon: ArrowRight, color: '#4ECDC4' },
-  { type: 'swipeUp', icon: ArrowUp, color: '#45B7D1' },
-  { type: 'swipeDown', icon: ArrowDown, color: '#96CEB4' },
-  { type: 'tap', icon: Circle, color: '#FFBE0B' },
-  { type: 'doubleTap', icon: CircleDot, color: '#FF006E' },
-  { type: 'avoid', icon: X, color: '#000000' }
+  { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
+  { type: "swipeRight", icon: ArrowRight, color: "#4ECDC4" },
+  { type: "swipeUp", icon: ArrowUp, color: "#45B7D1" },
+  { type: "swipeDown", icon: ArrowDown, color: "#96CEB4" },
+  { type: "tap", icon: Circle, color: "#FFBE0B" },
+  { type: "doubleTap", icon: CircleDot, color: "#FF006E" },
+  { type: "avoid", icon: X, color: "#000000" },
+  { type: "extraLive", icon: Heart, color: "#ff0000" }, // Pink color for Extra Live
+  { type: "coins", icon: CircleDollarSign, color: "#22d65e" },
 ];
 
 // Tutorial blocks
 const tutorialBlocks = [
-  { type: 'tap', icon: Circle, color: '#FFBE0B' },
-  { type: 'swipeLeft', icon: ArrowLeft, color: '#FF6B6B' },
-  { type: 'doubleTap', icon: CircleDot, color: '#FF006E' }
+  { type: "tap", icon: Circle, color: "#FFBE0B" },
+  { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
+  { type: "doubleTap", icon: CircleDot, color: "#FF006E" },
 ];
 
+// Update the checkAndConsumeExtraLife function
+const checkAndConsumeExtraLife = async (userId) => {
+  try {
+    console.log("Checking for extra lives...");
+    const shopItems = await getShopItems(userId);
+    console.log("Shop items:", shopItems);
+
+    if (shopItems?.shopItems && shopItems.shopItems["extra-lives"] > 0) {
+      console.log("Found extra life, attempting to consume...");
+      const success = await consumeExtraLife(userId);
+      console.log("Consume extra life result:", success);
+      return success;
+    }
+    console.log("No extra lives available");
+    return false;
+  } catch (error) {
+    console.error("Error checking extra lives:", error);
+    return false;
+  }
+};
 
 export default function SwipeGame() {
   const [userId, setUserId] = useState(null);
@@ -35,12 +76,46 @@ export default function SwipeGame() {
     isGameOver: false,
     isInTutorial: true,
     tutorialIndex: 0,
-    transitioning: false
+    transitioning: false,
   });
+
+  // Initialize coins from localStorage
+  const [coins, setCoins] = useState(0);
+
+  // New state for Double Score activation
+  const [doubleScoreActive, setDoubleScoreActive] = useState(false);
+
+  // Add state for extra lives
+  const [extraLives, setExtraLives] = useState(0);
+
+  // Add listener for shop items
+  useEffect(() => {
+    if (!userId) return;
+
+    const unsubscribe = listenToShopItems(userId, (data) => {
+      // Force a re-render when coins become zero
+      if (data.coins === 0) {
+        setCoins(0);
+      } else {
+        setCoins(Number(data.coins));
+      }
+
+      setExtraLives(data.shopItems["extra-lives"] || 0);
+      const doubleScoreCount = data.shopItems?.["double-score"] || 0;
+
+      if (doubleScoreCount > 0 && !doubleScoreActive) {
+        setDoubleScoreActive(true);
+      } else if (doubleScoreCount === 0 && doubleScoreActive) {
+        setDoubleScoreActive(false);
+      }
+    });
+
+    return () => unsubscribe?.();
+  }, [userId, doubleScoreActive]);
 
   useEffect(() => {
     // Check if the user ID is already stored
-    const storedUserId = localStorage.getItem('userId');
+    const storedUserId = localStorage.getItem("userId");
 
     if (storedUserId) {
       // If exists, set it in the state
@@ -49,15 +124,17 @@ export default function SwipeGame() {
       // Generate a new user ID
       const newUserId = Math.random().toString(36).substr(2, 9);
       setUserId(newUserId);
-      localStorage.setItem('userId', newUserId); // Store it in localStorage
+      localStorage.setItem("userId", newUserId); // Store it in localStorage
     }
   }, []);
-  
+
   const [interactionState, setInteractionState] = useState({
     start: null,
     lastTapTime: 0,
-    tapCount: 0
+    tapCount: 0,
   });
+
+  const [nextRareScore, setNextRareScore] = useState(200);
 
   const resetGame = useCallback(() => {
     setGameState({
@@ -67,235 +144,423 @@ export default function SwipeGame() {
       isGameOver: false,
       isInTutorial: false,
       tutorialIndex: 0,
-      transitioning: false
+      transitioning: false,
     });
     setInteractionState({
       start: null,
       lastTapTime: 0,
-      tapCount: 0
+      tapCount: 0,
     });
+
+    // Check double score availability from database
+    if (userId) {
+      getShopItems(userId).then((data) => {
+        if (data?.shopItems["double-score"] > 0) {
+          setDoubleScoreActive(true);
+        } else {
+          setDoubleScoreActive(false);
+        }
+      });
+    }
+
+    setNextRareScore(200);
+  }, [userId]);
+
+  // Update handleCoinsChange to handle zero explicitly
+  const handleCoinsChange = useCallback((newCoins) => {
+    const coinsValue = Number(newCoins) || 0;
+    setCoins(coinsValue);
   }, []);
 
-  const getRandomBlock = useCallback(() => ({
-    ...actions[Math.floor(Math.random() * actions.length)],
-    id: Math.random().toString(36).substr(2, 9),
-    createdAt: Date.now()
-  }), []);
+  const getRandomBlock = useCallback(() => {
+    const currentScore = gameState.score;
+
+    const rareBlockChance = 1 / 50; // rare block probability (extra live/ coions)
+
+    if (currentScore >= 200 && currentScore >= nextRareScore) {
+      if (Math.random() < rareBlockChance) {
+        const rareTypes = ["extraLive", "coins"];
+        const chosenType =
+          rareTypes[Math.floor(Math.random() * rareTypes.length)];
+        const chosenAction = actions.find(
+          (action) => action.type === chosenType
+        );
+        const chosenIcon = chosenAction.icon;
+        const chosenColor = chosenAction.color;
+
+        setNextRareScore((prev) => prev + 740); // Increase the score threshold for the next rare block
+
+        return {
+          type: chosenType,
+          icon: chosenIcon,
+          color: chosenColor,
+          id: Math.random().toString(36).substr(2, 9),
+          createdAt: Date.now(),
+        };
+      }
+    }
+
+    return {
+      ...actions[Math.floor(Math.random() * (actions.length - 2))],
+      id: Math.random().toString(36).substr(2, 9),
+      createdAt: Date.now(),
+    };
+  }, [gameState.score, nextRareScore]);
 
   const spawnBlocks = useCallback(() => {
-    const { blocks, score, isGameOver, isInTutorial, tutorialIndex, transitioning } = gameState;
+    const {
+      blocks = [],
+      score,
+      isGameOver,
+      isInTutorial,
+      tutorialIndex,
+      transitioning,
+    } = gameState;
 
     if (isGameOver || transitioning) return;
 
-    if (blocks.length === 0) {
+    if (!blocks || blocks.length === 0) {
       if (isInTutorial) {
         const tutorialBlock = {
           ...tutorialBlocks[tutorialIndex],
           id: `tutorial-${tutorialIndex}`,
-          createdAt: Date.now()
+          createdAt: Date.now(),
         };
-        setGameState(prev => ({ ...prev, blocks: [tutorialBlock] }));
+        setGameState((prev) => ({ ...prev, blocks: [tutorialBlock] }));
       } else {
         const targetBlockCount = Math.min(9, 1 + Math.floor(score / 50));
         const newBlocks = Array(targetBlockCount)
           .fill(null)
           .map(() => getRandomBlock());
-        setGameState(prev => ({ ...prev, blocks: newBlocks }));
+        setGameState((prev) => ({ ...prev, blocks: newBlocks }));
       }
     }
   }, [gameState, getRandomBlock]);
 
   useEffect(() => {
+    if (!gameState?.blocks) return;
     spawnBlocks();
-  }, [spawnBlocks, gameState.blocks.length]);
+  }, [spawnBlocks, gameState?.blocks?.length]);
 
+  // Update the timer effect to properly handle the extra life check
   useEffect(() => {
     if (gameState.isGameOver || gameState.isInTutorial) return;
-  
-    const interval = setInterval(() => {
-      setGameState(prev => {
-        const updatedTimer = prev.timer + 0.1;
-  
-        // General time limit for non-avoid blocks
-        const timeLimit = prev.score >= 500 ? 5 : 5.5;
-        // Shorter time limit for avoid blocks (2.5 seconds less)
-        const avoidBlockTimeLimit = timeLimit - 2.5;
-  
-        // Check if any regular blocks have timed out
-        const shouldGameOver = prev.blocks.some(block =>
-          block.type !== 'avoid' &&
+
+    let isProcessingExtraLife = false; // Add flag to prevent multiple consumptions
+
+    const interval = setInterval(async () => {
+      if (isProcessingExtraLife) return; // Skip if already processing
+
+      const currentBlocks = Array.isArray(gameState.blocks)
+        ? gameState.blocks
+        : [];
+      const timeLimit = gameState.score >= 500 ? 5 : 5.5;
+
+      const timedOutBlock = currentBlocks.find(
+        (block) =>
+          !["avoid", "extraLive", "coins"].includes(block.type) &&
           (Date.now() - block.createdAt) / 1000 >= timeLimit
-        );
-  
-        // If any regular block timed out, end the game
-        if (shouldGameOver) {
-          return { ...prev, isGameOver: true };
+      );
+
+      if (timedOutBlock) {
+        try {
+          isProcessingExtraLife = true; // Set flag before processing
+          console.log("Block timed out, checking for extra life...");
+          const hasExtraLife = await checkAndConsumeExtraLife(userId);
+          console.log("Extra life check result:", hasExtraLife);
+
+          setGameState((prev) => {
+            if (hasExtraLife) {
+              console.log("Extra life used, continuing game");
+              return {
+                ...prev,
+                blocks: prev.blocks.filter((b) => b.id !== timedOutBlock.id),
+              };
+            } else {
+              console.log("No extra life available, game over");
+              return {
+                ...prev,
+                isGameOver: true,
+                blocks: [],
+                transitioning: false,
+              };
+            }
+          });
+
+          // Reset flag after small delay to ensure state update is complete
+          setTimeout(() => {
+            isProcessingExtraLife = false;
+          }, 200);
+
+          if (hasExtraLife) return;
+        } catch (error) {
+          console.error("Error handling extra life:", error);
+          setGameState((prev) => ({
+            ...prev,
+            isGameOver: true,
+            blocks: [],
+            transitioning: false,
+          }));
+          isProcessingExtraLife = false; // Reset flag on error
+          return;
         }
-  
-        const currentTime = Date.now();
-        
-        // Filter blocks that haven't timed out (considering the shorter lifespan for avoid blocks)
-        const updatedBlocks = prev.blocks.filter(block =>
-          (block.type === 'avoid' && (currentTime - block.createdAt) / 1000 < avoidBlockTimeLimit) ||
-          (block.type !== 'avoid' && (currentTime - block.createdAt) / 1000 < timeLimit)
-        );
-  
+      }
+
+      // Only update other blocks if we haven't handled a timed out block
+      setGameState((prev) => {
+        if (prev.isGameOver) return prev;
+
+        const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
+        const timeLimit = prev.score >= 500 ? 5 : 5.5;
+        const avoidBlockTimeLimit = timeLimit - 2.5;
+
+        const updatedBlocks = currentBlocks.filter((block) => {
+          const blockAge = (Date.now() - block.createdAt) / 1000;
+          if (["avoid", "extraLive", "coins"].includes(block.type)) {
+            return blockAge < avoidBlockTimeLimit;
+          }
+          return blockAge < timeLimit;
+        });
+
         return {
           ...prev,
-          timer: updatedTimer,
-          blocks: updatedBlocks
+          timer: prev.timer + 0.1,
+          blocks: updatedBlocks,
         };
       });
     }, 100);
-  
-    return () => clearInterval(interval);
-  }, [gameState.isGameOver, gameState.isInTutorial]);
-  
 
-  const handleSuccess = useCallback((blockId) => {
-    setGameState(prev => {
-      if (prev.isInTutorial) {
-        if (prev.tutorialIndex < tutorialBlocks.length - 1) {
-          return {
-            ...prev,
-            blocks: [],
-            tutorialIndex: prev.tutorialIndex + 1,
-            transitioning: true
-          };
-        } else {
-          return {
-            ...prev,
-            blocks: [],
-            isInTutorial: false,
-            transitioning: true
-          };
-        }
-      } else {
-        return {
-          ...prev,
-          score: prev.score + 10,
-          blocks: prev.blocks.filter(b => b.id !== blockId)
-        };
-      }
-    });
+    return () => {
+      clearInterval(interval);
+    };
+  }, [
+    gameState.isGameOver,
+    gameState.isInTutorial,
+    userId,
+    gameState.score,
+    gameState.blocks,
+  ]);
 
-    if (gameState.isInTutorial) {
-      setTimeout(() => {
-        setGameState(prev => ({ ...prev, transitioning: false }));
-      }, 100);
-    }
-  }, [gameState.isInTutorial]);
+  const handleSuccess = useCallback(
+    (blockId, blockType) => {
+      setGameState((prev) => {
+        // Ensure we have valid blocks array
+        const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
 
-  const handleInteraction = useCallback((e, type, block) => {
-    e.preventDefault(); // we have no idea what this does 
-    if (gameState.isGameOver) return;
-    const point = e.touches?.[0] || e.changedTouches?.[0] || e;
-
-    if (type === 'start') {
-      setInteractionState(prev => ({
-        ...prev,
-        start: {
-          x: point.clientX,
-          y: point.clientY,
-          time: Date.now()
-        }
-      }));
-    } else if (type === 'end') {
-      const start = interactionState.start;
-      if (!start) return;
-
-      const deltaX = point.clientX - start.x;
-      const deltaY = point.clientY - start.y;
-      const deltaTime = Date.now() - start.time;
-
-      if (block.type === 'avoid') {
-        setGameState(prev => ({ ...prev, isGameOver: true }));
-        return;
-      }
-      if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
-        const now = Date.now();
-
-        if (block.type === 'doubleTap') {
-          if (now - interactionState.lastTapTime < 300) {
-            handleSuccess(block.id);
-            setInteractionState(prev => ({
+        if (prev.isInTutorial) {
+          if (prev.tutorialIndex < tutorialBlocks.length - 1) {
+            return {
               ...prev,
-              lastTapTime: 0,
-              tapCount: 0
+              blocks: [],
+              tutorialIndex: prev.tutorialIndex + 1,
+              transitioning: true,
+            };
+          } else {
+            return {
+              ...prev,
+              blocks: [],
+              isInTutorial: false,
+              transitioning: true,
+            };
+          }
+        } else {
+          if (blockType === "extraLive") {
+            addShopItems(userId, "extra-lives", 1);
+            return {
+              ...prev,
+              blocks: currentBlocks.filter((b) => b.id !== blockId),
+            };
+          } else if (blockType === "coins") {
+            updateCoinsAndAchievements(userId, 15);
+            return {
+              ...prev,
+              blocks: currentBlocks.filter((b) => b.id !== blockId),
+            };
+          } else {
+            const scoreIncrement = doubleScoreActive ? 20 : 10;
+            return {
+              ...prev,
+              score: prev.score + scoreIncrement,
+              blocks: currentBlocks.filter((b) => b.id !== blockId),
+            };
+          }
+        }
+      });
+
+      if (gameState.isInTutorial) {
+        setTimeout(() => {
+          setGameState((prev) => ({ ...prev, transitioning: false }));
+        }, 100);
+      }
+    },
+    [gameState.isInTutorial, userId, doubleScoreActive]
+  );
+
+  const handleInteraction = useCallback(
+    async (e, type, block) => {
+      e.preventDefault();
+      if (gameState.isGameOver) return;
+      const point = e.touches?.[0] || e.changedTouches?.[0] || e;
+
+      if (type === "start") {
+        setInteractionState((prev) => ({
+          ...prev,
+          start: {
+            x: point.clientX,
+            y: point.clientY,
+            time: Date.now(),
+          },
+        }));
+      } else if (type === "end") {
+        const start = interactionState.start;
+        if (!start) return;
+
+        const deltaX = point.clientX - start.x;
+        const deltaY = point.clientY - start.y;
+        const deltaTime = Date.now() - start.time;
+
+        if (block.type === "avoid") {
+          const hasExtraLife = await checkAndConsumeExtraLife(userId);
+          if (hasExtraLife) {
+            setGameState((prev) => ({
+              ...prev,
+              blocks: prev.blocks.filter((b) => b.id !== block.id),
             }));
           } else {
-            setInteractionState(prev => ({
+            setGameState((prev) => ({
               ...prev,
-              lastTapTime: now,
-              tapCount: prev.tapCount + 1
+              isGameOver: true,
+              blocks: [], // Clear blocks immediately
+              transitioning: false,
             }));
           }
-        } else if (block.type === 'tap') {
-          handleSuccess(block.id);
+          return;
         }
-      } else if (deltaTime < 250) {
-        const absX = Math.abs(deltaX);
-        const absY = Math.abs(deltaY);
 
-        if (absX > absY && absX > 30) {
-          if ((deltaX > 0 && block.type === 'swipeRight') ||
-            (deltaX < 0 && block.type === 'swipeLeft')) {
-            handleSuccess(block.id);
+        if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
+          const now = Date.now();
+
+          if (block.type === "doubleTap") {
+            if (now - interactionState.lastTapTime < 300) {
+              handleSuccess(block.id, block.type);
+              setInteractionState((prev) => ({
+                ...prev,
+                lastTapTime: 0,
+                tapCount: 0,
+              }));
+            } else {
+              setInteractionState((prev) => ({
+                ...prev,
+                lastTapTime: now,
+                tapCount: prev.tapCount + 1,
+              }));
+            }
+          } else if (block.type === "tap") {
+            handleSuccess(block.id, block.type);
+          } else if (block.type === "extraLive" || block.type === "coins") {
+            handleSuccess(block.id, block.type);
           }
-        } else if (absY > absX && absY > 30) {
-          if ((deltaY > 0 && block.type === 'swipeDown') ||
-            (deltaY < 0 && block.type === 'swipeUp')) {
-            handleSuccess(block.id);
+        } else if (deltaTime < 250) {
+          const absX = Math.abs(deltaX);
+          const absY = Math.abs(deltaY);
+
+          if (absX > absY && absX > 30) {
+            if (
+              (deltaX > 0 && block.type === "swipeRight") ||
+              (deltaX < 0 && block.type === "swipeLeft")
+            ) {
+              handleSuccess(block.id, block.type);
+            }
+          } else if (absY > absX && absY > 30) {
+            if (
+              (deltaY > 0 && block.type === "swipeDown") ||
+              (deltaY < 0 && block.type === "swipeUp")
+            ) {
+              handleSuccess(block.id, block.type);
+            }
           }
+        }
+
+        setInteractionState((prev) => ({ ...prev, start: null }));
+      }
+    },
+    [
+      gameState.isGameOver,
+      interactionState.start,
+      interactionState.lastTapTime,
+      handleSuccess,
+      userId,
+    ]
+  );
+
+  // Update the effect that consumes double score
+  useEffect(() => {
+    const handleDoubleScoreEnd = async () => {
+      // Only consume double score when the game transitions from active to game over
+      if (gameState.isGameOver && doubleScoreActive) {
+        const success = await consumeDoubleScore(userId);
+        if (success) {
+          setDoubleScoreActive(false);
         }
       }
+    };
 
-      setInteractionState(prev => ({ ...prev, start: null }));
-    }
-  }, [gameState.isGameOver, interactionState.start, interactionState.lastTapTime, handleSuccess]);
+    handleDoubleScoreEnd();
+  }, [gameState.isGameOver]);
 
   return (
-  <div className='flex flex-col min-h-screen touch-none select-none'>
-
-{!gameState.isGameOver && ( <div className='flex'>
-   <Header score={gameState.score} timer={gameState.timer} isInTutorial={gameState.isInTutorial} />
-   </div>)}
-  
-
-   <div>
-    {gameState.isGameOver && (
-        <div>
-            <GameOver score={gameState.score} resetGame={resetGame} userId={userId} />
+    <div className="flex flex-col min-h-screen touch-none select-none">
+      {!gameState.isGameOver && (
+        <div className="flex">
+          <Header
+            score={gameState.score}
+            timer={gameState.timer}
+            isInTutorial={gameState.isInTutorial}
+            extraLives={extraLives}
+            doubleScoreActive={doubleScoreActive}
+          />
         </div>
-    )}
-   </div>
-   
-   {!gameState.isGameOver &&(<div className='flex-1 flex flex-col items-center justify-center bg-gray-100'>
+      )}
 
-    <div>
-        <div className="flex flex-col gap-4 px-4 pt-4">
-            {gameState.blocks.map((block) => (
+      <div>
+        {gameState.isGameOver && (
+          <div>
+            <GameOver
+              score={gameState.score}
+              resetGame={resetGame}
+              userId={userId}
+            />
+          </div>
+        )}
+      </div>
+
+      {!gameState.isGameOver && (
+        <div className="flex-1 flex flex-col items-center justify-center bg-gray-100">
+          <div>
+            <div className="flex flex-col gap-4 px-4 pt-4">
+              {(gameState.blocks || []).map((block) => (
                 <Block
-                    key={block.id}
-                    block={block}
-                    gameState={gameState}
-                    handleInteraction={handleInteraction}
+                  key={block.id}
+                  block={block}
+                  gameState={gameState}
+                  handleInteraction={handleInteraction}
                 />
-            ))}
-        </div>
-    </div>
-    <div className='pt-4'>
-      {gameState.isInTutorial && gameState.blocks[0] && (
-        <div className="flex text-xl text-gray-600">
-          {gameState.blocks[0].type === 'doubleTap' ? 'Double Tap' :
-            gameState.blocks[0].type === 'tap' ? 'Tap' :
-              `Swipe ${gameState.blocks[0].type.replace('swipe', '')}`}
+              ))}
+            </div>
+          </div>
+          <div className="pt-4">
+            {gameState.isInTutorial && gameState.blocks?.[0] && (
+              <div className="flex text-xl text-gray-600">
+                {gameState.blocks[0].type === "doubleTap"
+                  ? "Double Tap"
+                  : gameState.blocks[0].type === "tap"
+                  ? "Tap"
+                  : `Swipe ${gameState.blocks[0].type.replace("swipe", "")}`}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
-   </div>)}
-   
-
-  </div>
   );
 }
