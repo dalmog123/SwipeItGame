@@ -14,42 +14,7 @@ import {
   updateCoinsAndAchievements,
   setUserData,
 } from "../api/gameoverAPI";
-
-// Define default achievements
-const defaultAchievements = [
-  {
-    id: "highScorer",
-    title: "High Scorer",
-    description: "Reach high scores",
-    levels: [100, 1000, 5000],
-    progress: 0,
-    coinReward: 100,
-  },
-  {
-    id: "coinCollector",
-    title: "Coin Collector",
-    description: "Collect coins",
-    levels: [100, 500, 1000],
-    progress: 0,
-    coinReward: 50,
-  },
-  {
-    id: "balloonPopper",
-    title: "Balloon Popper",
-    description: "Pop balloons",
-    levels: [12, 40, 120],
-    progress: 0,
-    coinReward: 100,
-  },
-  {
-    id: "gamePlayer",
-    title: "Game Player",
-    description: "Play multiple games",
-    levels: [5, 20, 200],
-    progress: 0,
-    coinReward: 50,
-  },
-];
+import { defaultAchievements } from "../config/achievements";
 
 export default function GameOver({ score, resetGame, userId }) {
   const [showScore, setShowScore] = useState(false);
@@ -162,15 +127,15 @@ export default function GameOver({ score, resetGame, userId }) {
   }, [userId]); // Remove coins and totalCoinsEarned from dependencies
 
   // Move updateAchievementProgress definition before it's used
-  const updateAchievementProgress = useCallback((achievementId, increment) => {
-    setAchievements((prevAchievements) =>
-      prevAchievements.map((achievement) =>
-        achievement.id === achievementId
-          ? { ...achievement, progress: achievement.progress + increment }
-          : achievement
-      )
-    );
-  }, []);
+  // const updateAchievementProgress = useCallback((achievementId, increment) => {
+  //   setAchievements((prevAchievements) =>
+  //     prevAchievements.map((achievement) =>
+  //       achievement.id === achievementId
+  //         ? { ...achievement, progress: achievement.progress + increment }
+  //         : achievement
+  //     )
+  //   );
+  // }, []);
 
   const checkAndAwardAchievements = useCallback(
     async (achievements) => {
@@ -292,7 +257,11 @@ export default function GameOver({ score, resetGame, userId }) {
 
   useEffect(() => {
     if (achievementQueue.length > 0 && !currentAchievement) {
-      setCurrentAchievement(achievementQueue[0]);
+      const nextAchievement = achievementQueue[0];
+      // Check if this achievement notification has already been shown
+      const achievementKey = `${nextAchievement.id}-${nextAchievement.level}`;
+
+      setCurrentAchievement(nextAchievement);
       setAchievementQueue((prev) => prev.slice(1));
     }
   }, [achievementQueue, currentAchievement]);
@@ -315,40 +284,78 @@ export default function GameOver({ score, resetGame, userId }) {
 
   useEffect(() => {
     if (!userId) return;
-    // Remove the !score check since 0 is a valid score
 
     const updateHighScore = async () => {
       try {
-        // Get current user data to check actual high score
         const userData = await getUserData(userId);
         const currentHighScore = userData?.highScore || 0;
+        const currentCoins = userData?.coins || 0;
+        const currentTotalCoins = userData?.totalCoinsEarned || 0;
 
-        // Update achievements regardless of score
-        const updatedAchievements = achievements.map((achievement) =>
-          achievement.id === "highScorer"
-            ? { ...achievement, progress: Math.max(currentHighScore, score) }
-            : achievement
-        );
-
-        // Only update high score if it's higher than current
+        // Only update if we have a new high score
         if (score > currentHighScore) {
-          // Update database first
-          await updateUserData(userId, {
-            highScore: score,
-            achievements: updatedAchievements,
+          const highScoreReward = 100;
+
+          // First handle the high score achievement - only if not already claimed
+          if (!userData.claimedRewards?.["highScorer-0"]) {
+            const highScoreAchievement = {
+              id: "highScorer",
+              achievement: "High Scorer",
+              level: 1,
+              coins: highScoreReward,
+            };
+
+            // Add to achievement queue only if not already claimed
+            setAchievementQueue((prev) => {
+              // Check if this achievement is already in the queue
+              const isDuplicate = prev.some(
+                (a) =>
+                  a.id === highScoreAchievement.id &&
+                  a.level === highScoreAchievement.level
+              );
+              return isDuplicate ? prev : [...prev, highScoreAchievement];
+            });
+          }
+
+          // Update achievements progress
+          const updatedAchievements = achievements.map((achievement) => {
+            switch (achievement.id) {
+              case "highScorer":
+                return { ...achievement, progress: score };
+              case "coinCollector":
+                return {
+                  ...achievement,
+                  progress: currentTotalCoins + highScoreReward,
+                };
+              default:
+                return achievement;
+            }
           });
+
+          // Update database with initial high score reward
+          const updates = {
+            highScore: score,
+            coins: currentCoins + highScoreReward,
+            totalCoinsEarned: currentTotalCoins + highScoreReward,
+            achievements: updatedAchievements,
+            claimedRewards: {
+              ...userData.claimedRewards,
+              "highScorer-0": true, // Mark high scorer level 1 as claimed
+            },
+          };
+
+          await updateUserData(userId, updates);
 
           // Update local state
           setHighScore(score);
           setAchievements(updatedAchievements);
 
-          // Check for achievement rewards only once after database is updated
-          setTimeout(() => {
-            checkAndAwardAchievements(updatedAchievements);
-          }, 100);
-        } else {
-          // Still update achievements even if high score isn't beaten
-          setAchievements(updatedAchievements);
+          // Now check for coin collector achievement only
+          const coinCollectorOnly = updatedAchievements.filter(
+            (achievement) => achievement.id === "coinCollector"
+          );
+
+          await checkAndAwardAchievements(coinCollectorOnly);
         }
       } catch (error) {
         console.error("Error updating high score:", error);
@@ -356,7 +363,7 @@ export default function GameOver({ score, resetGame, userId }) {
     };
 
     updateHighScore();
-    setShowScore(true); // Always show score, even if it's 0
+    setShowScore(true);
   }, [score, userId, achievements, checkAndAwardAchievements]);
 
   useEffect(() => {
@@ -500,7 +507,7 @@ export default function GameOver({ score, resetGame, userId }) {
           if (isNaN(userData.coins)) updates.coins = 0;
           if (isNaN(userData.totalCoinsEarned)) updates.totalCoinsEarned = 0;
           if (!userData.username)
-            updates.username = `Player${Math.floor(Math.random() * 10000)}`;
+            updates.username = `Player${Math.floor(Math.random() * 9999999)}`;
 
           if (Object.keys(updates).length > 0) {
             console.log("Updating user data:", updates);

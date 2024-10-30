@@ -28,7 +28,10 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
         const newScores = usersSnapshot.docs.map((doc) => ({
           id: doc.id,
           userId: doc.id, // In users collection, document ID is the userId
-          player: doc.data().player || doc.data().username || "Unknown Player",
+          player:
+            doc.data().player ||
+            doc.data().username ||
+            `Player${Math.floor(Math.random() * 9999999)}`,
           score: doc.data().highScore || 0,
         }));
 

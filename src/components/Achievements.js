@@ -16,6 +16,8 @@ import {
   Zap,
 } from "lucide-react";
 import { purchaseShopItem, listenToShopItems } from "../api/shopAPI";
+import { getUserData, listenToUserData } from "../api/gameoverAPI";
+import { defaultAchievements } from "../config/achievements";
 
 const Achievements = ({
   coins = 1250,
@@ -26,6 +28,8 @@ const Achievements = ({
   const [activeTab, setActiveTab] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
   const [purchasedItems, setPurchasedItems] = useState({});
+  const [localAchievements, setLocalAchievements] =
+    useState(currentAchievements);
 
   const toggleTab = (tab) => {
     setActiveTab(activeTab === tab ? null : tab);
@@ -147,6 +151,45 @@ const Achievements = ({
     return () => unsubscribe?.();
   }, [userId]);
 
+  // Add real-time listener for user data
+  useEffect(() => {
+    if (!userId) return;
+
+    const unsubscribe = listenToUserData(userId, (userData) => {
+      if (userData) {
+        // Create properly synced achievements array
+        const syncedAchievements = (
+          userData.achievements || defaultAchievements
+        ).map((achievement) => {
+          switch (achievement.id) {
+            case "highScorer":
+              return { ...achievement, progress: userData.highScore || 0 };
+            case "coinCollector":
+              return {
+                ...achievement,
+                progress: userData.totalCoinsEarned || 0,
+              };
+            case "balloonPopper":
+              return {
+                ...achievement,
+                progress: userData.balloonsPoppedCount || 0,
+              };
+            case "gamePlayer":
+              return { ...achievement, progress: userData.gamesPlayed || 0 };
+            default:
+              return achievement;
+          }
+        });
+
+        console.log("Achievements synced:", syncedAchievements); // Debug log
+        setLocalAchievements(syncedAchievements);
+      }
+    });
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
+  }, [userId]);
+
   // Add validation when displaying coins
   const displayCoins = isNaN(coins) ? 0 : Number(coins);
 
@@ -199,7 +242,7 @@ const Achievements = ({
                 <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
                   {" "}
                   {/* Added max-height and overflow */}
-                  {currentAchievements.map((achievement) => (
+                  {localAchievements.map((achievement) => (
                     <div
                       key={achievement.id}
                       className="p-2 rounded-lg bg-white/50 hover:bg-white/70 transition-all"

@@ -93,15 +93,20 @@ export default function SwipeGame() {
     if (!userId) return;
 
     const unsubscribe = listenToShopItems(userId, (data) => {
+      // Add null check and default values
+      const shopData = data || { coins: 0, shopItems: {} };
+
       // Force a re-render when coins become zero
-      if (data.coins === 0) {
+      if (shopData.coins === 0) {
         setCoins(0);
       } else {
-        setCoins(Number(data.coins));
+        setCoins(Number(shopData.coins || 0));
       }
 
-      setExtraLives(data.shopItems["extra-lives"] || 0);
-      const doubleScoreCount = data.shopItems?.["double-score"] || 0;
+      // Ensure shopItems exists before accessing
+      const shopItems = shopData.shopItems || {};
+      setExtraLives(shopItems["extra-lives"] || 0);
+      const doubleScoreCount = shopItems["double-score"] || 0;
 
       if (doubleScoreCount > 0 && !doubleScoreActive) {
         setDoubleScoreActive(true);
@@ -152,15 +157,21 @@ export default function SwipeGame() {
       tapCount: 0,
     });
 
-    // Check double score availability from database
+    // Check double score availability from database with proper error handling
     if (userId) {
-      getShopItems(userId).then((data) => {
-        if (data?.shopItems["double-score"] > 0) {
-          setDoubleScoreActive(true);
-        } else {
-          setDoubleScoreActive(false);
-        }
-      });
+      getShopItems(userId)
+        .then((data) => {
+          const shopItems = data?.shopItems || {};
+          if (shopItems["double-score"] > 0) {
+            setDoubleScoreActive(true);
+          } else {
+            setDoubleScoreActive(false);
+          }
+        })
+        .catch((error) => {
+          console.error("Error getting shop items:", error);
+          setDoubleScoreActive(false); // Default to false on error
+        });
     }
 
     setNextRareScore(200);
@@ -175,31 +186,42 @@ export default function SwipeGame() {
   const getRandomBlock = useCallback(() => {
     const currentScore = gameState.score;
 
-    const rareBlockChance = 1 / 50; // rare block probability (extra live/ coions)
+    // Very high probabilities for testing the disappearing bug
+    const coinsBlockChance = 1 / 50; // 50% chance for coins
+    const extraLiveChance = 1 / 150; // 30% chance for extra lives
 
-    if (currentScore >= 200 && currentScore >= nextRareScore) {
-      if (Math.random() < rareBlockChance) {
-        const rareTypes = ["extraLive", "coins"];
-        const chosenType =
-          rareTypes[Math.floor(Math.random() * rareTypes.length)];
-        const chosenAction = actions.find(
-          (action) => action.type === chosenType
+    // Lower threshold for testing
+    if (currentScore >= 20 && currentScore >= nextRareScore) {
+      // First check for extra live
+      if (Math.random() < extraLiveChance) {
+        const extraLiveAction = actions.find(
+          (action) => action.type === "extraLive"
         );
-        const chosenIcon = chosenAction.icon;
-        const chosenColor = chosenAction.color;
-
-        setNextRareScore((prev) => prev + 740); // Increase the score threshold for the next rare block
-
+        setNextRareScore((prev) => prev + 50); // Small increment for frequent spawns
         return {
-          type: chosenType,
-          icon: chosenIcon,
-          color: chosenColor,
+          type: "extraLive",
+          icon: extraLiveAction.icon,
+          color: extraLiveAction.color,
+          id: Math.random().toString(36).substr(2, 9),
+          createdAt: Date.now(),
+        };
+      }
+
+      // Then check for coins (more common)
+      if (Math.random() < coinsBlockChance) {
+        const coinsAction = actions.find((action) => action.type === "coins");
+        setNextRareScore((prev) => prev + 200); // Reduced increment for testing
+        return {
+          type: "coins",
+          icon: coinsAction.icon,
+          color: coinsAction.color,
           id: Math.random().toString(36).substr(2, 9),
           createdAt: Date.now(),
         };
       }
     }
 
+    // Return regular block if no rare blocks were selected
     return {
       ...actions[Math.floor(Math.random() * (actions.length - 2))],
       id: Math.random().toString(36).substr(2, 9),
@@ -246,10 +268,10 @@ export default function SwipeGame() {
   useEffect(() => {
     if (gameState.isGameOver || gameState.isInTutorial) return;
 
-    let isProcessingExtraLife = false; // Add flag to prevent multiple consumptions
+    let isProcessingExtraLife = false;
 
     const interval = setInterval(async () => {
-      if (isProcessingExtraLife) return; // Skip if already processing
+      if (isProcessingExtraLife) return;
 
       const currentBlocks = Array.isArray(gameState.blocks)
         ? gameState.blocks
@@ -264,7 +286,7 @@ export default function SwipeGame() {
 
       if (timedOutBlock) {
         try {
-          isProcessingExtraLife = true; // Set flag before processing
+          isProcessingExtraLife = true;
           console.log("Block timed out, checking for extra life...");
           const hasExtraLife = await checkAndConsumeExtraLife(userId);
           console.log("Extra life check result:", hasExtraLife);
@@ -287,7 +309,6 @@ export default function SwipeGame() {
             }
           });
 
-          // Reset flag after small delay to ensure state update is complete
           setTimeout(() => {
             isProcessingExtraLife = false;
           }, 200);
@@ -301,7 +322,7 @@ export default function SwipeGame() {
             blocks: [],
             transitioning: false,
           }));
-          isProcessingExtraLife = false; // Reset flag on error
+          isProcessingExtraLife = false;
           return;
         }
       }
@@ -312,14 +333,17 @@ export default function SwipeGame() {
 
         const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
         const timeLimit = prev.score >= 500 ? 5 : 5.5;
-        const avoidBlockTimeLimit = timeLimit - 2.5;
 
+        // Separate time limits for different block types
         const updatedBlocks = currentBlocks.filter((block) => {
           const blockAge = (Date.now() - block.createdAt) / 1000;
-          if (["avoid", "extraLive", "coins"].includes(block.type)) {
-            return blockAge < avoidBlockTimeLimit;
+
+          if (block.type === "avoid") {
+            return blockAge < timeLimit - 2.5; // Avoid blocks disappear earlier
+          } else if (block.type === "extraLive" || block.type === "coins") {
+            return blockAge < timeLimit + 2; // Special blocks stay longer
           }
-          return blockAge < timeLimit;
+          return blockAge < timeLimit; // Normal blocks use standard time
         });
 
         return {
