@@ -44,6 +44,7 @@ const tutorialBlocks = [
   { type: "tap", icon: Circle, color: "#FFBE0B" },
   { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
   { type: "doubleTap", icon: CircleDot, color: "#FF006E" },
+  { type: "avoid", icon: X, color: "#000000" },
 ];
 
 // Update the checkAndConsumeExtraLife function
@@ -444,6 +445,13 @@ export default function SwipeGame() {
         const deltaTime = Date.now() - start.time;
 
         if (block.type === "avoid") {
+          // Special handling for avoid block in tutorial
+          if (gameState.isInTutorial) {
+            handleSuccess(block.id, block.type);
+            return;
+          }
+
+          // Normal game avoid block handling
           const hasExtraLife = await checkAndConsumeExtraLife(userId);
           if (hasExtraLife) {
             setGameState((prev) => ({
@@ -454,7 +462,7 @@ export default function SwipeGame() {
             setGameState((prev) => ({
               ...prev,
               isGameOver: true,
-              blocks: [], // Clear blocks immediately
+              blocks: [],
               transitioning: false,
             }));
           }
@@ -579,6 +587,8 @@ export default function SwipeGame() {
                   ? "Double Tap"
                   : gameState.blocks[0].type === "tap"
                   ? "Tap"
+                  : gameState.blocks[0].type === "avoid"
+                  ? "Avoid"
                   : `Swipe ${gameState.blocks[0].type.replace("swipe", "")}`}
               </div>
             )}
