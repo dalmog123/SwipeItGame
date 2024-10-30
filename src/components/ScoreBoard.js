@@ -10,24 +10,17 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState(null);
   const scoreRef = useRef(null);
+  const [userStats, setUserStats] = useState(null);
 
   useEffect(() => {
     const fetchScores = async () => {
       try {
-        // Fetch from both collections
-        const scoresSnapshot = await getDocs(collection(db, "scores"));
         const usersSnapshot = await getDocs(collection(db, "users"));
 
-        // Process old scores
-        const oldScores = scoresSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        // Process new scores from users collection
+        // Process scores from users collection
         const newScores = usersSnapshot.docs.map((doc) => ({
           id: doc.id,
-          userId: doc.id, // In users collection, document ID is the userId
+          userId: doc.id,
           player:
             doc.data().player ||
             doc.data().username ||
@@ -35,26 +28,24 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
           score: doc.data().highScore || 0,
         }));
 
-        // Merge both arrays
-        const allScores = [...oldScores, ...newScores];
-
         // Sort all scores by score in descending order
         newScores.sort((a, b) => b.score - a.score);
 
-        setScores(newScores);
-
-        // Scroll to user's position (existing code)
-        const userIndex = allScores.findIndex(
+        // Get current user's stats
+        const userPosition = newScores.findIndex(
           (score) => score.userId === currentUserId
         );
-        if (userIndex !== -1 && scoreRef.current) {
-          setTimeout(() => {
-            scoreRef.current.children[userIndex]?.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-            });
-          }, 500);
+        if (userPosition !== -1) {
+          setUserStats({
+            rank: userPosition + 1,
+            ...newScores[userPosition],
+          });
         }
+
+        // Only show top 50 scores in the leaderboard
+        setScores(newScores.slice(0, 50));
+
+        // Scroll handling...
       } catch (error) {
         console.error("Error fetching scores:", error);
       }
@@ -141,28 +132,50 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
         </motion.button>
 
         <h1
-          className="font-bold text-center text-gray-100 mb-4 sm:mb-8"
+          className="font-bold text-center text-gray-100 mb-4"
           style={{ fontSize: "clamp(1.2rem, 5vw, 4rem)" }}
         >
           Leaderboard
         </h1>
 
-        <div className="flex justify-center space-x-1 sm:space-x-2 mb-4">
-          {["daily", "weekly", "monthly"].map((period) => (
-            <button
-              key={period}
-              className={`px-2 sm:px-6 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-                selectedPeriod === period
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              }`}
-              onClick={() => setSelectedPeriod(period)}
-            >
-              {period.charAt(0).toUpperCase() + period.slice(1)}
-            </button>
-          ))}
-        </div>
+        {/* Player Stats Card */}
+        {userStats && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-blue-600 bg-opacity-50 rounded-2xl p-4 mb-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
+                  <span className="text-xl font-bold text-white">
+                    #{userStats.rank}
+                  </span>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">
+                    {userStats.player}
+                  </h2>
+                  <p className="text-blue-200">Your Ranking</p>
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-white">
+                {userStats.score.toLocaleString()}
+              </div>
+            </div>
+          </motion.div>
+        )}
 
+        {/* Top 50 Title */}
+        {/* <motion.h2
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-2xl font-bold text-gray-100 mb-4 text-center"
+        >
+          Top 50
+        </motion.h2> */}
+
+        {/* Existing leaderboard scrollable section */}
         <div
           className="flex-grow overflow-y-auto space-y-2 sm:space-y-4"
           ref={scoreRef}

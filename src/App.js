@@ -45,6 +45,8 @@ const tutorialBlocks = [
   { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
   { type: "doubleTap", icon: CircleDot, color: "#FF006E" },
   { type: "avoid", icon: X, color: "#000000" },
+  { type: "extraLive", icon: Heart, color: "#ff0000" }, // Pink color for Extra Live
+  { type: "coins", icon: CircleDollarSign, color: "#22d65e" },
 ];
 
 // Update the checkAndConsumeExtraLife function
@@ -589,6 +591,10 @@ export default function SwipeGame() {
                   ? "Tap"
                   : gameState.blocks[0].type === "avoid"
                   ? "Avoid"
+                  : gameState.blocks[0].type === "extraLive"
+                  ? "Gives Extra Life"
+                  : gameState.blocks[0].type === "coins"
+                  ? "Gives 15 Coins"
                   : `Swipe ${gameState.blocks[0].type.replace("swipe", "")}`}
               </div>
             )}
