@@ -139,8 +139,7 @@ export default function GameOver({ score, resetGame, userId }) {
 
   const checkAndAwardAchievements = useCallback(
     async (achievements) => {
-      if (!userId) return;
-
+      if (!userId || !achievements) return;
       try {
         const userData = await getUserData(userId);
         const currentClaimedRewards = userData?.claimedRewards || {};
@@ -151,14 +150,12 @@ export default function GameOver({ score, resetGame, userId }) {
         const currentCoins = Number(userData?.coins || 0);
         const currentTotalCoins = Number(userData?.totalCoinsEarned || 0);
 
-        console.log("Current coin values:", {
-          currentCoins,
-          currentTotalCoins,
-          userData: userData,
-        });
+        achievements?.forEach((achievement) => {
+          if (!achievement || !achievement.levels) return;
 
-        achievements.forEach((achievement) => {
           achievement.levels.forEach((level, index) => {
+            if (level === undefined || level === null) return;
+
             const rewardKey = `${achievement.id}-${index}`;
             if (
               achievement.progress >= level &&
@@ -169,7 +166,7 @@ export default function GameOver({ score, resetGame, userId }) {
                 id: achievement.id,
                 achievement: achievement.title,
                 level: index + 1,
-                coins: achievement.coinReward,
+                coins: achievement.coinReward || 0,
               });
               coinsToAdd += Number(achievement.coinReward || 0);
               currentClaimedRewards[rewardKey] = true;

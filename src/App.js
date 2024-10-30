@@ -25,7 +25,12 @@ import {
   addShopItems,
   listenToShopItems,
 } from "./api/shopAPI";
-import { updateCoinsAndAchievements } from "./api/gameoverAPI";
+import {
+  getUserData,
+  setUserData,
+  updateCoinsAndAchievements,
+} from "./api/gameoverAPI";
+import { defaultAchievements } from "./config/achievements";
 // Defining the game actions
 const actions = [
   { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
@@ -125,14 +130,32 @@ export default function SwipeGame() {
     // Check if the user ID is already stored
     const storedUserId = localStorage.getItem("userId");
 
+    const initializeNewUser = async (newUserId) => {
+      try {
+        // Initialize user data in Firebase with default values
+        await setUserData(newUserId, {
+          coins: 0,
+          totalCoinsEarned: 0,
+          highScore: 0,
+          balloonsPoppedCount: 0,
+          shopItems: {},
+          claimedRewards: {},
+          achievements: defaultAchievements,
+        });
+        setUserId(newUserId);
+        localStorage.setItem("userId", newUserId);
+      } catch (error) {
+        console.error("Error initializing new user:", error);
+      }
+    };
+
     if (storedUserId) {
       // If exists, set it in the state
       setUserId(storedUserId);
     } else {
-      // Generate a new user ID
+      // Generate a new user ID and initialize their data
       const newUserId = Math.random().toString(36).substr(2, 9);
-      setUserId(newUserId);
-      localStorage.setItem("userId", newUserId); // Store it in localStorage
+      initializeNewUser(newUserId);
     }
   }, []);
 
@@ -190,11 +213,11 @@ export default function SwipeGame() {
     const currentScore = gameState.score;
 
     // Very high probabilities for testing the disappearing bug
-    const coinsBlockChance = 1 / 50; // 50% chance for coins
-    const extraLiveChance = 1 / 150; // 30% chance for extra lives
+    const coinsBlockChance = 1 / 40; // 2.5% chance for coins
+    const extraLiveChance = 1 / 250; // 0.4% chance for extra lives
 
     // Lower threshold for testing
-    if (currentScore >= 20 && currentScore >= nextRareScore) {
+    if (currentScore >= 200 && currentScore >= nextRareScore) {
       // First check for extra live
       if (Math.random() < extraLiveChance) {
         const extraLiveAction = actions.find(
@@ -398,7 +421,29 @@ export default function SwipeGame() {
               blocks: currentBlocks.filter((b) => b.id !== blockId),
             };
           } else if (blockType === "coins") {
-            updateCoinsAndAchievements(userId, 15);
+            // Ensure the user exists before adding coins
+            getUserData(userId)
+              .then((userData) => {
+                if (!userData) {
+                  // If user doesn't exist, initialize them first
+                  setUserData(userId, {
+                    coins: 15,
+                    totalCoinsEarned: 15,
+                    highScore: 0,
+                    balloonsPoppedCount: 0,
+                    shopItems: {},
+                    claimedRewards: {},
+                    achievements: defaultAchievements,
+                  });
+                } else {
+                  // User exists, update coins normally
+                  updateCoinsAndAchievements(userId, 15);
+                }
+              })
+              .catch((error) => {
+                console.error("Error handling coins:", error);
+              });
+
             return {
               ...prev,
               blocks: currentBlocks.filter((b) => b.id !== blockId),
