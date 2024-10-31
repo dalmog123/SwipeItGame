@@ -125,10 +125,10 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="fixed top-4 left-4 p-2 rounded-full bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors z-50"
+          className="fixed top-4 sm:top-6 md:top-8 left-4 sm:left-6 md:left-8 p-2 sm:p-2.5 md:p-3 rounded-full bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors z-50"
           onClick={onBack}
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 min-w-[20px] min-h-[20px] max-w-[28px] max-h-[28px]" />
         </motion.button>
 
         <h1
@@ -143,23 +143,25 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-600 bg-opacity-50 rounded-2xl p-4 mb-4"
+            className="bg-blue-600 bg-opacity-50 rounded-2xl p-2 sm:p-3 md:p-4 mb-4"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
-                  <span className="text-xl font-bold text-white">
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-blue-500 flex items-center justify-center">
+                  <span className="text-base sm:text-lg md:text-xl font-bold text-white">
                     #{userStats.rank}
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
                     {userStats.player}
                   </h2>
-                  <p className="text-blue-200">Your Ranking</p>
+                  <p className="text-sm sm:text-base text-blue-200">
+                    Your Ranking
+                  </p>
                 </div>
               </div>
-              <div className="text-3xl font-bold text-white">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
                 {userStats.score.toLocaleString()}
               </div>
             </div>

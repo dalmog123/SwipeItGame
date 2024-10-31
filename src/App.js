@@ -49,9 +49,9 @@ const tutorialBlocks = [
   { type: "tap", icon: Circle, color: "#FFBE0B" },
   { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
   { type: "doubleTap", icon: CircleDot, color: "#FF006E" },
-  { type: "avoid", icon: X, color: "#000000" },
-  { type: "extraLive", icon: Heart, color: "#ff0000" }, // Pink color for Extra Live
-  { type: "coins", icon: CircleDollarSign, color: "#22d65e" },
+  // { type: "avoid", icon: X, color: "#000000" },
+  // { type: "extraLive", icon: Heart, color: "#ff0000" },
+  // { type: "coins", icon: CircleDollarSign, color: "#22d65e" },
 ];
 
 // Update the checkAndConsumeExtraLife function
@@ -214,7 +214,7 @@ export default function SwipeGame() {
 
     // Very high probabilities for testing the disappearing bug
     const coinsBlockChance = 1 / 40; // 2.5% chance for coins
-    const extraLiveChance = 1 / 250; // 0.4% chance for extra lives
+    const extraLiveChance = 1 / 50; // 0.4% chance for extra lives
 
     // Lower threshold for testing
     if (currentScore >= 200 && currentScore >= nextRareScore) {
@@ -367,7 +367,7 @@ export default function SwipeGame() {
           if (block.type === "avoid") {
             return blockAge < timeLimit - 2.5; // Avoid blocks disappear earlier
           } else if (block.type === "extraLive" || block.type === "coins") {
-            return blockAge < timeLimit + 2; // Special blocks stay longer
+            return blockAge < timeLimit - 2.5; // Special blocks stay less
           }
           return blockAge < timeLimit; // Normal blocks use standard time
         });

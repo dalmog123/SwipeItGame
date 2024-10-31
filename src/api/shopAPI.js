@@ -49,22 +49,29 @@ export const listenToShopItems = (userId, callback) => {
 // Function to consume an extra life
 export const consumeExtraLife = async (userId) => {
   try {
-    if (!userId) throw new Error("No user ID provided");
-
     const userRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userRef);
 
-    if (!userDoc.exists()) return false;
+    // Log current state
+    const currentDoc = await getDoc(userRef);
+    console.log("Current shop state:", currentDoc.data());
 
-    const userData = userDoc.data();
-    if (!userData.shopItems || userData.shopItems["extra-lives"] <= 0)
-      return false;
+    const userData = currentDoc.data();
+    const currentLives = userData?.shopItems?.["extra-lives"] || 0;
 
-    await updateDoc(userRef, {
-      "shopItems.extra-lives": increment(-1),
-    });
+    console.log("Current lives before consumption:", currentLives);
 
-    return true;
+    if (currentLives > 0) {
+      await updateDoc(userRef, {
+        ["shopItems.extra-lives"]: currentLives - 1,
+      });
+
+      // Verify update
+      const updatedDoc = await getDoc(userRef);
+      console.log("Updated shop state:", updatedDoc.data());
+
+      return true;
+    }
+    return false;
   } catch (error) {
     console.error("Error consuming extra life:", error);
     return false;
