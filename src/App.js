@@ -213,8 +213,8 @@ export default function SwipeGame() {
     const currentScore = gameState.score;
 
     // Very high probabilities for testing the disappearing bug
-    const coinsBlockChance = 1 / 40; // 2.5% chance for coins
-    const extraLiveChance = 1 / 50; // 0.4% chance for extra lives
+    const coinsBlockChance = 1 / 80; // 2.5% chance for coins
+    const extraLiveChance = 1 / 500; // 0.4% chance for extra lives
 
     // Lower threshold for testing
     if (currentScore >= 200 && currentScore >= nextRareScore) {
