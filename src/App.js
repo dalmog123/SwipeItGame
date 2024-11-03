@@ -214,7 +214,7 @@ export default function SwipeGame() {
 
     // Very high probabilities for testing the disappearing bug
     const coinsBlockChance = 1 / 80; // 2.5% chance for coins
-    const extraLiveChance = 1 / 500; // 0.4% chance for extra lives
+    const extraLiveChance = 1 / 500; // 0.2% chance for extra lives
 
     // Lower threshold for testing
     if (currentScore >= 200 && currentScore >= nextRareScore) {
@@ -491,6 +491,22 @@ export default function SwipeGame() {
         const deltaY = point.clientY - start.y;
         const deltaTime = Date.now() - start.time;
 
+        // Helper function to handle successful swipes with animation
+        const handleSwipeSuccess = (blockId, blockType) => {
+          // First set the block as "being swiped" in the state
+          setGameState((prev) => ({
+            ...prev,
+            blocks: prev.blocks.map((b) =>
+              b.id === blockId ? { ...b, isBeingSwiped: true } : b
+            ),
+          }));
+
+          // Wait for animation to complete before removing the block
+          setTimeout(() => {
+            handleSuccess(blockId, blockType);
+          }, 300); // Match this with your animation duration
+        };
+
         if (block.type === "avoid") {
           // Special handling for avoid block in tutorial
           if (gameState.isInTutorial) {
@@ -534,9 +550,11 @@ export default function SwipeGame() {
                 tapCount: prev.tapCount + 1,
               }));
             }
-          } else if (block.type === "tap") {
-            handleSuccess(block.id, block.type);
-          } else if (block.type === "extraLive" || block.type === "coins") {
+          } else if (
+            block.type === "tap" ||
+            block.type === "extraLive" ||
+            block.type === "coins"
+          ) {
             handleSuccess(block.id, block.type);
           }
         } else if (deltaTime < 250) {
@@ -548,14 +566,14 @@ export default function SwipeGame() {
               (deltaX > 0 && block.type === "swipeRight") ||
               (deltaX < 0 && block.type === "swipeLeft")
             ) {
-              handleSuccess(block.id, block.type);
+              handleSwipeSuccess(block.id, block.type);
             }
           } else if (absY > absX && absY > 30) {
             if (
               (deltaY > 0 && block.type === "swipeDown") ||
               (deltaY < 0 && block.type === "swipeUp")
             ) {
-              handleSuccess(block.id, block.type);
+              handleSwipeSuccess(block.id, block.type);
             }
           }
         }
@@ -614,15 +632,16 @@ export default function SwipeGame() {
       </div>
 
       {!gameState.isGameOver && (
-        <div className="flex-1 flex flex-col items-center justify-center bg-gray-100">
+        <div className="flex-1 flex flex-col items-center justify-center bg-gray-100 overflow-hidden">
           <div>
-            <div className="flex flex-col gap-4 px-4 pt-4">
+            <div className="flex flex-col gap-4 px-4 pt-4 overflow-hidden">
               {(gameState.blocks || []).map((block) => (
                 <Block
                   key={block.id}
                   block={block}
                   gameState={gameState}
                   handleInteraction={handleInteraction}
+                  isInTutorial={gameState.isInTutorial}
                 />
               ))}
             </div>
