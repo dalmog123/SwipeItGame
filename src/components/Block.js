@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { soundManager } from "../utils/sound";
 
 export default function Block({ block, handleInteraction, isInTutorial }) {
-  // Helper function to determine the swipe animation
+  const [isTapped, setIsTapped] = useState(false);
+
   const getSwipeAnimation = (type) => {
     switch (type) {
       case "swipeLeft":
@@ -17,6 +19,46 @@ export default function Block({ block, handleInteraction, isInTutorial }) {
     }
   };
 
+  const getStyles = useCallback(
+    () => ({
+      width: "80vw",
+      maxWidth: "550px",
+      height: "7vh",
+      backgroundColor: block.color,
+      touchAction: "none",
+      userSelect: "none",
+      position: "relative",
+      transform: block.isBeingSwiped
+        ? getSwipeAnimation(block.type)
+        : isTapped
+        ? "scale(0.95)"
+        : "none",
+      transition: block.isBeingSwiped
+        ? "transform 0.15s ease-out"
+        : "transform 0.1s ease-out",
+      opacity: block.isBeingSwiped ? 0.8 : 1,
+    }),
+    [block.isBeingSwiped, block.type, isTapped]
+  );
+
+  const handleTouchStart = (e) => {
+    if (
+      block.type === "tap" ||
+      block.type === "doubleTap" ||
+      block.type === "extraLive" ||
+      block.type === "coins"
+    ) {
+      setIsTapped(true);
+      // soundManager.play("tap");
+    }
+    handleInteraction(e, "start", block);
+  };
+
+  const handleTouchEnd = (e) => {
+    setIsTapped(false);
+    handleInteraction(e, "end", block);
+  };
+
   const shouldShake =
     block.type === "avoid"
       ? !isInTutorial && (Date.now() - block.createdAt) / 1000 >= 2
@@ -24,24 +66,15 @@ export default function Block({ block, handleInteraction, isInTutorial }) {
 
   return (
     <div
-      className={`rounded-lg shadow-lg flex items-center justify-center
-      ${shouldShake ? "animate-shake" : ""}`}
-      style={{
-        width: "80vw",
-        maxWidth: "550px",
-        height: "7vh",
-        backgroundColor: block.color,
-        transition: "transform 0.3s ease-out",
-        transform: block.isBeingSwiped ? getSwipeAnimation(block.type) : "none",
-        pointerEvents: block.isBeingSwiped ? "none" : "auto",
-        touchAction: "none",
-        userSelect: "none",
-      }}
-      onTouchStart={(e) => handleInteraction(e, "start", block)}
-      onTouchEnd={(e) => handleInteraction(e, "end", block)}
-      onMouseDown={(e) => handleInteraction(e, "start", block)}
-      onMouseUp={(e) => handleInteraction(e, "end", block)}
-      onMouseLeave={(e) => handleInteraction(e, "end", block)}
+      className={`rounded-lg shadow-lg flex items-center justify-center ${
+        shouldShake ? "animate-shake" : ""
+      }`}
+      style={getStyles()}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleTouchStart}
+      onMouseUp={handleTouchEnd}
+      onMouseLeave={handleTouchEnd}
     >
       <block.icon size={"6vh"} color="white" />
     </div>

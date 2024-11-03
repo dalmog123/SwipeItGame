@@ -31,6 +31,8 @@ import {
   updateCoinsAndAchievements,
 } from "./api/gameoverAPI";
 import { defaultAchievements } from "./config/achievements";
+// Importing sound utility
+import { soundManager } from "./utils/sound";
 // Defining the game actions
 const actions = [
   { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
@@ -493,18 +495,25 @@ export default function SwipeGame() {
 
         // Helper function to handle successful swipes with animation
         const handleSwipeSuccess = (blockId, blockType) => {
-          // First set the block as "being swiped" in the state
+          // soundManager.play("swipe");
+
           setGameState((prev) => ({
             ...prev,
             blocks: prev.blocks.map((b) =>
-              b.id === blockId ? { ...b, isBeingSwiped: true } : b
+              b.id === blockId
+                ? {
+                    ...b,
+                    isBeingSwiped: true,
+                  }
+                : b
             ),
           }));
 
-          // Wait for animation to complete before removing the block
-          setTimeout(() => {
-            handleSuccess(blockId, blockType);
-          }, 300); // Match this with your animation duration
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              handleSuccess(blockId, blockType);
+            }, 150);
+          });
         };
 
         if (block.type === "avoid") {
