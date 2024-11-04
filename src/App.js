@@ -215,8 +215,8 @@ export default function SwipeGame() {
     const currentScore = gameState.score;
 
     // Very high probabilities for testing the disappearing bug
-    const coinsBlockChance = 1 / 80; // 2.5% chance for coins
-    const extraLiveChance = 1 / 500; // 0.2% chance for extra lives
+    const coinsBlockChance = 1 / 10; // 2.5% chance for coins
+    const extraLiveChance = 1 / 5; // 0.2% chance for extra lives
 
     // Lower threshold for testing
     if (currentScore >= 200 && currentScore >= nextRareScore) {
@@ -294,7 +294,12 @@ export default function SwipeGame() {
 
   // Update the timer effect to properly handle the extra life check
   useEffect(() => {
-    if (gameState.isGameOver || gameState.isInTutorial) return;
+    if (
+      gameState.isGameOver ||
+      gameState.isInTutorial ||
+      gameState.transitioning
+    )
+      return;
 
     let isProcessingExtraLife = false;
 
@@ -388,6 +393,7 @@ export default function SwipeGame() {
   }, [
     gameState.isGameOver,
     gameState.isInTutorial,
+    gameState.transitioning,
     userId,
     gameState.score,
     gameState.blocks,
@@ -517,27 +523,31 @@ export default function SwipeGame() {
         };
 
         if (block.type === "avoid") {
-          // Special handling for avoid block in tutorial
           if (gameState.isInTutorial) {
             handleSuccess(block.id, block.type);
             return;
           }
 
-          // Normal game avoid block handling
           const hasExtraLife = await checkAndConsumeExtraLife(userId);
-          if (hasExtraLife) {
+
+          if (!hasExtraLife) {
+            // Only set transitioning if we're going to game over
             setGameState((prev) => ({
               ...prev,
-              blocks: prev.blocks.filter((b) => b.id !== block.id),
-            }));
-          } else {
-            setGameState((prev) => ({
-              ...prev,
-              isGameOver: true,
-              blocks: [],
-              transitioning: false,
+              transitioning: true,
             }));
           }
+
+          setTimeout(() => {
+            setGameState((prev) => ({
+              ...prev,
+              isGameOver: !hasExtraLife,
+              blocks: hasExtraLife
+                ? prev.blocks.filter((b) => b.id !== block.id)
+                : [],
+              transitioning: !hasExtraLife,
+            }));
+          }, 800);
           return;
         }
 
@@ -651,6 +661,7 @@ export default function SwipeGame() {
                   gameState={gameState}
                   handleInteraction={handleInteraction}
                   isInTutorial={gameState.isInTutorial}
+                  isTransitioning={gameState.transitioning}
                 />
               ))}
             </div>
