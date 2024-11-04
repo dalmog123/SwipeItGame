@@ -87,6 +87,7 @@ export default function SwipeGame() {
     isInTutorial: true,
     tutorialIndex: 0,
     transitioning: false,
+    isFrozen: false,
   });
 
   // Initialize coins from localStorage
@@ -178,6 +179,7 @@ export default function SwipeGame() {
       isInTutorial: false,
       tutorialIndex: 0,
       transitioning: false,
+      isFrozen: false,
     });
     setInteractionState({
       start: null,
@@ -294,7 +296,8 @@ export default function SwipeGame() {
 
   // Update the timer effect to properly handle the extra life check
   useEffect(() => {
-    if (gameState.isGameOver || gameState.isInTutorial) return;
+    if (gameState.isGameOver || gameState.isInTutorial || gameState.isFrozen)
+      return;
 
     let isProcessingExtraLife = false;
 
@@ -366,11 +369,12 @@ export default function SwipeGame() {
         const updatedBlocks = currentBlocks.filter((block) => {
           const blockAge = (Date.now() - block.createdAt) / 1000;
 
-          if (block.type === "extraLive" || block.type === "coins") {
-            return blockAge < timeLimit - 2.5; // Only special blocks have shorter time
+          if (block.type === "avoid") {
+            return blockAge < timeLimit - 2.5; // Avoid blocks disappear earlier
+          } else if (block.type === "extraLive" || block.type === "coins") {
+            return blockAge < timeLimit - 2.5; // Special blocks stay less
           }
-          // Treat avoid blocks like normal blocks
-          return blockAge < timeLimit;
+          return blockAge < timeLimit; // Normal blocks use standard time
         });
 
         return {
@@ -387,6 +391,7 @@ export default function SwipeGame() {
   }, [
     gameState.isGameOver,
     gameState.isInTutorial,
+    gameState.isFrozen,
     userId,
     gameState.score,
     gameState.blocks,
@@ -522,20 +527,29 @@ export default function SwipeGame() {
             return;
           }
 
-          // Normal game avoid block handling
+          // First check for extra life
           const hasExtraLife = await checkAndConsumeExtraLife(userId);
+
           if (hasExtraLife) {
+            // If user has extra life, just remove the block without freezing
             setGameState((prev) => ({
               ...prev,
               blocks: prev.blocks.filter((b) => b.id !== block.id),
             }));
           } else {
-            setGameState((prev) => ({
-              ...prev,
-              isGameOver: true,
-              blocks: [],
-              transitioning: false,
-            }));
+            // Only freeze if no extra life is available
+            setGameState((prev) => ({ ...prev, isFrozen: true }));
+
+            // Wait 1 second before game over
+            setTimeout(() => {
+              setGameState((prev) => ({
+                ...prev,
+                isGameOver: true,
+                blocks: [],
+                transitioning: false,
+                isFrozen: false,
+              }));
+            }, 1000);
           }
           return;
         }
@@ -647,9 +661,10 @@ export default function SwipeGame() {
                 <Block
                   key={block.id}
                   block={block}
-                  gameState={gameState}
                   handleInteraction={handleInteraction}
                   isInTutorial={gameState.isInTutorial}
+                  isTransitioning={gameState.transitioning}
+                  isFrozen={gameState.isFrozen && block.type !== "avoid"}
                 />
               ))}
             </div>
