@@ -215,8 +215,8 @@ export default function SwipeGame() {
     const currentScore = gameState.score;
 
     // Very high probabilities for testing the disappearing bug
-    const coinsBlockChance = 1 / 10; // 2.5% chance for coins
-    const extraLiveChance = 1 / 5; // 0.2% chance for extra lives
+    const coinsBlockChance = 1 / 80; // 2.5% chance for coins
+    const extraLiveChance = 1 / 450; // 0.2% chance for extra lives
 
     // Lower threshold for testing
     if (currentScore >= 200 && currentScore >= nextRareScore) {
@@ -402,7 +402,6 @@ export default function SwipeGame() {
   const handleSuccess = useCallback(
     (blockId, blockType) => {
       setGameState((prev) => {
-        // Ensure we have valid blocks array
         const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
 
         if (prev.isInTutorial) {
@@ -422,18 +421,24 @@ export default function SwipeGame() {
             };
           }
         } else {
+          // Remove the block first
+          const updatedBlocks = currentBlocks.filter((b) => b.id !== blockId);
+
           if (blockType === "extraLive") {
-            addShopItems(userId, "extra-lives", 1);
+            // Add the extra life after ensuring block is removed
+            setTimeout(() => {
+              addShopItems(userId, "extra-lives", 1);
+            }, 0);
+
             return {
               ...prev,
-              blocks: currentBlocks.filter((b) => b.id !== blockId),
+              blocks: updatedBlocks,
             };
           } else if (blockType === "coins") {
-            // Ensure the user exists before adding coins
+            // Similar handling for coins...
             getUserData(userId)
               .then((userData) => {
                 if (!userData) {
-                  // If user doesn't exist, initialize them first
                   setUserData(userId, {
                     coins: 15,
                     totalCoinsEarned: 15,
@@ -444,7 +449,6 @@ export default function SwipeGame() {
                     achievements: defaultAchievements,
                   });
                 } else {
-                  // User exists, update coins normally
                   updateCoinsAndAchievements(userId, 15);
                 }
               })
@@ -454,26 +458,20 @@ export default function SwipeGame() {
 
             return {
               ...prev,
-              blocks: currentBlocks.filter((b) => b.id !== blockId),
+              blocks: updatedBlocks,
             };
           } else {
             const scoreIncrement = doubleScoreActive ? 20 : 10;
             return {
               ...prev,
               score: prev.score + scoreIncrement,
-              blocks: currentBlocks.filter((b) => b.id !== blockId),
+              blocks: updatedBlocks,
             };
           }
         }
       });
-
-      if (gameState.isInTutorial) {
-        setTimeout(() => {
-          setGameState((prev) => ({ ...prev, transitioning: false }));
-        }, 100);
-      }
     },
-    [gameState.isInTutorial, userId, doubleScoreActive]
+    [userId, doubleScoreActive]
   );
 
   const handleInteraction = useCallback(

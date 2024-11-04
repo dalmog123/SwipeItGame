@@ -11,6 +11,7 @@ export default function Block({
   const [isTapped, setIsTapped] = useState(false);
   const [showShatter, setShowShatter] = useState(false);
   const [particles, setParticles] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (showShatter) {
@@ -64,7 +65,7 @@ export default function Block({
   );
 
   const handleTouchStart = (e) => {
-    if (isTransitioning) return;
+    if (isTransitioning || isProcessing) return;
     if (
       block.type === "tap" ||
       block.type === "doubleTap" ||
@@ -77,13 +78,15 @@ export default function Block({
   };
 
   const handleTouchEnd = (e) => {
-    if (isTransitioning) return;
+    if (isTransitioning || isProcessing) return;
     setIsTapped(false);
     if (block.type === "extraLive" || block.type === "coins") {
+      setIsProcessing(true);
       setShowShatter(true);
       soundManager.play("collect");
       setTimeout(() => {
         handleInteraction(e, "end", block);
+        setIsProcessing(false);
       }, 250);
     } else if (block.type === "avoid") {
       setShowShatter(true);
