@@ -406,6 +406,14 @@ export default function SwipeGame() {
 
         if (prev.isInTutorial) {
           if (prev.tutorialIndex < tutorialBlocks.length - 1) {
+            // Set transitioning to false after a short delay
+            setTimeout(() => {
+              setGameState((prevState) => ({
+                ...prevState,
+                transitioning: false,
+              }));
+            }, 100);
+
             return {
               ...prev,
               blocks: [],
@@ -413,6 +421,14 @@ export default function SwipeGame() {
               transitioning: true,
             };
           } else {
+            // Set transitioning to false after a short delay
+            setTimeout(() => {
+              setGameState((prevState) => ({
+                ...prevState,
+                transitioning: false,
+              }));
+            }, 100);
+
             return {
               ...prev,
               blocks: [],
