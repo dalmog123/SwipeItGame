@@ -92,6 +92,7 @@ export default function Block({
         handleInteraction(e, "end", block);
       }, 400);
     } else if (block.type === "avoid") {
+      setIsHandled(true);
       setShowShatter(true);
       soundManager.play("collect");
       setTimeout(() => {
