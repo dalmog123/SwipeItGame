@@ -7,6 +7,7 @@ module.exports = {
         shake: "shake 0.15s linear infinite",
         swipeIn: "swipeIn 0.5s ease-out forwards",
         swipeOut: "swipeOut 0.5s ease-out forwards",
+        "bounce-gentle": "bounce 2s infinite ease-in-out",
       },
       keyframes: {
         shake: {
@@ -25,6 +26,10 @@ module.exports = {
         fadeIn: {
           "0%": { opacity: "0", transform: "translateY(20px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        bounce: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-25%)" },
         },
       },
     },

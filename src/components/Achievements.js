@@ -20,6 +20,7 @@ import { purchaseShopItem, listenToShopItems } from "../api/shopAPI";
 import { getUserData, listenToUserData } from "../api/gameoverAPI";
 import { defaultAchievements } from "../config/achievements";
 import { soundManager } from "../utils/sound";
+import Information from "./Information";
 
 const Achievements = ({
   coins = 1250,
@@ -33,6 +34,7 @@ const Achievements = ({
   const [localAchievements, setLocalAchievements] =
     useState(currentAchievements);
   const [isMuted, setIsMuted] = useState(false);
+  const [showInformation, setShowInformation] = useState(false);
 
   const toggleTab = (tab) => {
     setActiveTab(activeTab === tab ? null : tab);
@@ -220,6 +222,11 @@ const Achievements = ({
   const handleMuteToggle = () => {
     const muted = soundManager.toggleMute();
     setIsMuted(muted);
+  };
+
+  const handleInformationClick = () => {
+    setShowInformation(true);
+    setActiveTab(null); // Close the settings panel
   };
 
   return (
@@ -454,23 +461,7 @@ const Achievements = ({
                       </div>
                     </button>
                     <button
-                      onClick={() => toggleSection("changeUsername")}
-                      className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
-                          <User className="w-4 h-4" />
-                        </div>
-                        <span className="font-medium text-gray-800 text-sm">
-                          Change Username
-                        </span>
-                      </div>
-                      <div className="text-gray-400">
-                        <Settings className="w-4 h-4" />
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => toggleSection("information")}
+                      onClick={handleInformationClick}
                       className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all"
                     >
                       <div className="flex items-center gap-2">
@@ -492,6 +483,11 @@ const Achievements = ({
           </div>
         )}
       </div>
+
+      {/* Information Modal */}
+      {showInformation && (
+        <Information onClose={() => setShowInformation(false)} />
+      )}
     </>
   );
 };
