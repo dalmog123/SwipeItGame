@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
-import { soundManager } from "../utils/sound";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Heart, CircleDollarSign } from "lucide-react";
+import { soundManager } from "../utils/sound";
 
 export default function Block({
   block,
@@ -11,251 +12,227 @@ export default function Block({
 }) {
   const [isTapped, setIsTapped] = useState(false);
   const [showShatter, setShowShatter] = useState(false);
-  const [particles, setParticles] = useState([]);
+  const [isVisible, setIsVisible] = useState(true);
+  const [animationProps, setAnimationProps] = useState(null);
   const [isHandled, setIsHandled] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [blockPosition, setBlockPosition] = useState(null);
+  const interactionTimeoutRef = useRef(null);
 
-  useEffect(() => {
-    if (showShatter) {
-      const particleCount = 16;
-      const newParticles = Array.from({ length: particleCount }).map(
-        (_, i) => ({
-          id: i,
-          angle: (i * 360) / particleCount,
-          color: block.type === "extraLive" ? "#ff6b6b" : "#ffd700",
-        })
-      );
-      setParticles(newParticles);
-    }
-  }, [showShatter, block.type]);
-
-  const getSwipeAnimation = (type) => {
+  const getSwipeAnimation = useCallback((type) => {
     switch (type) {
       case "swipeLeft":
-        return "translateX(-100%)";
+        return { x: "-100%" };
       case "swipeRight":
-        return "translateX(100%)";
+        return { x: "100%" };
       case "swipeUp":
-        return "translateY(-100%)";
+        return { y: "-100%" };
       case "swipeDown":
-        return "translateY(100%)";
+        return { y: "100%" };
       default:
-        return "none";
+        return {};
     }
-  };
+  }, []);
 
-  const getStyles = useCallback(
-    () => ({
-      width: "80vw",
-      maxWidth: "550px",
-      height: "7vh",
-      backgroundColor: block.color,
-      touchAction: "none",
-      userSelect: "none",
-      position: "relative",
-      transform: block.isBeingSwiped
-        ? getSwipeAnimation(block.type)
-        : isTapped
-        ? "scale(0.95)"
-        : "none",
-      transition: block.isBeingSwiped
-        ? "transform 0.15s ease-out"
-        : "transform 0.1s ease-out",
-      opacity: block.isBeingSwiped ? 0.8 : isFrozen ? 0.5 : 1,
-      pointerEvents: isFrozen && block.type !== "avoid" ? "none" : "auto",
-    }),
-    [block.isBeingSwiped, block.type, isTapped, isFrozen]
-  );
+  useEffect(() => {
+    if (block?.id) {
+      setShowShatter(false);
+      setIsVisible(true);
+      setAnimationProps(null);
+      setIsHandled(false);
+      setIsAnimating(false);
+    }
+    return () => {
+      if (interactionTimeoutRef.current) {
+        clearTimeout(interactionTimeoutRef.current);
+      }
+    };
+  }, [block?.id]);
 
   const handleTouchStart = (e) => {
     if (isTransitioning || (isFrozen && block.type !== "avoid")) return;
-    if (
-      block.type === "tap" ||
-      block.type === "doubleTap" ||
-      block.type === "extraLive" ||
-      block.type === "coins"
-    ) {
+    if (["tap", "doubleTap", "extraLive", "coins"].includes(block.type)) {
       setIsTapped(true);
     }
     handleInteraction(e, "start", block);
   };
 
   const handleTouchEnd = (e) => {
-    if (isTransitioning || (isFrozen && block.type !== "avoid") || isHandled)
+    if (
+      isTransitioning ||
+      (isFrozen && block.type !== "avoid") ||
+      isHandled ||
+      isAnimating
+    )
       return;
     setIsTapped(false);
+
+    const blockElement = e.currentTarget;
+    const rect = blockElement.getBoundingClientRect();
+    setBlockPosition({
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+    });
 
     if (block.type === "extraLive" || block.type === "coins") {
       setIsHandled(true);
       setShowShatter(true);
+      setIsAnimating(true);
+      setIsVisible(false);
       soundManager.play("collect");
-      setTimeout(() => {
+
+      interactionTimeoutRef.current = setTimeout(() => {
         handleInteraction(e, "end", block);
       }, 400);
+
+      setTimeout(() => {
+        setIsAnimating(false);
+        setShowShatter(false);
+        setBlockPosition(null);
+        setIsHandled(false);
+      }, 1500);
     } else if (block.type === "avoid") {
       setIsHandled(true);
       setShowShatter(true);
+      setIsAnimating(true);
+      setIsVisible(false);
       soundManager.play("collect");
+
+      handleInteraction(e, "end", block);
+
       setTimeout(() => {
-        handleInteraction(e, "end", block);
-      }, 300);
+        setIsAnimating(false);
+        setShowShatter(false);
+        setBlockPosition(null);
+        setIsHandled(false);
+      }, 1500);
     } else {
       handleInteraction(e, "end", block);
     }
   };
 
-  useEffect(() => {
-    setIsHandled(false);
-  }, [block.id]);
-
   const shouldShake =
-    block.type === "avoid" ||
-    block.type === "extraLive" ||
-    block.type === "coins"
-      ? !isInTutorial && (Date.now() - block.createdAt) / 1000 >= 2
-      : !isInTutorial && (Date.now() - block.createdAt) / 1000 >= 4;
+    !isInTutorial &&
+    (Date.now() - block?.createdAt) / 1000 >=
+      (block?.type === "avoid" ||
+      block?.type === "extraLive" ||
+      block?.type === "coins"
+        ? 2
+        : 4);
 
-  const heartPath =
-    "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
+  const renderShatterEffect = () => {
+    if (!blockPosition) return null;
 
-  return (
-    <div className="relative">
-      <div
-        className={`rounded-lg shadow-lg flex items-center justify-center ${
-          shouldShake ? "animate-shake" : ""
-        }`}
-        style={{
-          ...getStyles(),
-          opacity: showShatter && block.type === "avoid" ? 0 : 1,
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleTouchStart}
-        onMouseUp={handleTouchEnd}
-        onMouseLeave={handleTouchEnd}
+    const particleCount = block.type === "coins" ? 16 : 12;
+
+    return (
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center"
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.5 }}
       >
-        <block.icon size={"6vh"} color="white" />
-      </div>
-      <AnimatePresence>
-        {showShatter && block.type === "extraLive" && (
-          <>
-            {[...Array(12)].map((_, i) => (
-              <motion.svg
-                key={i}
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className="absolute w-8 h-8"
-                style={{
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  fill: "#ff6b6b",
-                }}
-                initial={{
-                  opacity: 1,
-                  scale: 1,
-                  x: "-50%",
-                  y: "-50%",
-                }}
-                animate={{
-                  opacity: 0,
-                  scale: 0,
-                  x: `calc(-50% + ${(Math.random() - 0.5) * 500}px)`,
-                  y: `calc(-50% + ${(Math.random() - 0.5) * 500}px)`,
-                  rotate: Math.random() * 360,
-                }}
-                transition={{
-                  duration: 0.4,
-                  ease: "easeOut",
-                }}
-              >
-                <path d={heartPath} />
-              </motion.svg>
-            ))}
-          </>
-        )}
-        {showShatter && block.type === "coins" && (
-          <div
-            className="absolute inset-0 pointer-events-none overflow-visible"
-            style={{ zIndex: 50 }}
+        {Array.from({ length: particleCount }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+            animate={{
+              opacity: 0,
+              scale: 0,
+              x: (Math.random() - 0.5) * window.innerWidth,
+              y: (Math.random() - 0.5) * window.innerHeight,
+              rotate: Math.random() * 360,
+            }}
+            transition={{
+              duration: block.type === "avoid" ? 2.5 : 1.5,
+              ease: "easeOut",
+            }}
           >
-            {particles.map((particle) => (
-              <motion.div
-                key={particle.id}
-                initial={{
-                  scale: 1,
-                  x: "50%",
-                  y: "50%",
-                  opacity: 1,
-                }}
-                animate={{
-                  scale: 0,
-                  x: `calc(50% + ${
-                    Math.cos((particle.angle * Math.PI) / 180) * 150
-                  }px)`,
-                  y: `calc(50% + ${
-                    Math.sin((particle.angle * Math.PI) / 180) * 150
-                  }px)`,
-                  opacity: 0,
-                }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  duration: 0.4,
-                  ease: "easeOut",
-                }}
+            {block.type === "extraLive" && (
+              <Heart className="w-8 h-8 text-red-500" />
+            )}
+            {block.type === "coins" && (
+              <CircleDollarSign className="w-8 h-8 text-yellow-400" />
+            )}
+            {block.type === "avoid" && (
+              <div
+                className="w-12 h-12"
                 style={{
-                  position: "absolute",
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "50%",
-                  backgroundColor: particle.color,
-                }}
-              />
-            ))}
-          </div>
-        )}
-        {showShatter && block.type === "avoid" && (
-          <>
-            {[...Array(15)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute"
-                style={{
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
                   backgroundColor: block.color,
                   clipPath: `polygon(${Math.random() * 100}% ${
                     Math.random() * 100
                   }%, ${Math.random() * 100}% ${Math.random() * 100}%, ${
                     Math.random() * 100
                   }% ${Math.random() * 100}%)`,
-                  width: "150px",
-                  height: "150px",
-                  borderRadius: "6px",
-                }}
-                initial={{
-                  scale: 1,
-                  x: "-50%",
-                  y: "-50%",
-                  opacity: 1,
-                }}
-                animate={{
-                  scale: 0,
-                  x: `calc(-50% + ${(Math.random() - 0.5) * 600}px)`,
-                  y: `calc(-50% + ${(Math.random() - 0.5) * 600}px)`,
-                  rotate: Math.random() * 540,
-                  opacity: 0,
-                }}
-                transition={{
-                  duration: 1,
-                  ease: [0.2, 0.8, 0.2, 1],
-                  opacity: { duration: 1 },
                 }}
               />
-            ))}
-          </>
+            )}
+          </motion.div>
+        ))}
+      </motion.div>
+    );
+  };
+
+  return (
+    <>
+      <AnimatePresence>
+        {isVisible && block && (
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className={`rounded-lg shadow-lg flex items-center justify-center ${
+                shouldShake ? "animate-shake" : ""
+              }`}
+              style={{
+                width: "80vw",
+                maxWidth: "550px",
+                height: "7vh",
+                backgroundColor: block.color || "#000000",
+                opacity: block.isBeingSwiped ? 0.8 : isFrozen ? 0.5 : 1,
+                pointerEvents:
+                  (isFrozen && block.type !== "avoid") || isAnimating
+                    ? "none"
+                    : "auto",
+              }}
+              animate={block.isBeingSwiped ? getSwipeAnimation(block.type) : {}}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleTouchStart}
+              onMouseUp={handleTouchEnd}
+              onMouseLeave={handleTouchEnd}
+            >
+              {block.icon && <block.icon size="6vh" color="white" />}
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      <AnimatePresence>
+        {(showShatter || isAnimating) && blockPosition && (
+          <motion.div
+            className="fixed pointer-events-none"
+            style={{
+              zIndex: 9999,
+              top: blockPosition.top,
+              left: blockPosition.left,
+              width: blockPosition.width,
+              height: blockPosition.height,
+            }}
+          >
+            {renderShatterEffect()}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
