@@ -9,6 +9,7 @@ import {
   Crown,
   Heart,
   VolumeX,
+  Volume2,
   User,
   Info,
   ChevronDown,
@@ -18,6 +19,7 @@ import {
 import { purchaseShopItem, listenToShopItems } from "../api/shopAPI";
 import { getUserData, listenToUserData } from "../api/gameoverAPI";
 import { defaultAchievements } from "../config/achievements";
+import { soundManager } from "../utils/sound";
 
 const Achievements = ({
   coins = 1250,
@@ -30,6 +32,7 @@ const Achievements = ({
   const [purchasedItems, setPurchasedItems] = useState({});
   const [localAchievements, setLocalAchievements] =
     useState(currentAchievements);
+  const [isMuted, setIsMuted] = useState(false);
 
   const toggleTab = (tab) => {
     setActiveTab(activeTab === tab ? null : tab);
@@ -213,6 +216,11 @@ const Achievements = ({
 
   // Add validation when displaying coins
   const displayCoins = isNaN(coins) ? 0 : Number(coins);
+
+  const handleMuteToggle = () => {
+    const muted = soundManager.toggleMute();
+    setIsMuted(muted);
+  };
 
   return (
     <>
@@ -421,37 +429,62 @@ const Achievements = ({
                     <Settings className="w-5 h-5" /> Settings
                   </h3>
                   <div className="grid grid-cols-1 gap-2">
-                    {[
-                      {
-                        name: "Mute Sound",
-                        icon: <VolumeX className="w-4 h-4" />,
-                      },
-                      {
-                        name: "Change Username",
-                        icon: <User className="w-4 h-4" />,
-                      },
-                      {
-                        name: "Information",
-                        icon: <Info className="w-4 h-4" />,
-                      },
-                    ].map((item, index) => (
-                      <button
-                        key={index}
-                        className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all"
+                    <button
+                      onClick={handleMuteToggle}
+                      className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
+                          {isMuted ? (
+                            <VolumeX className="w-4 h-4" />
+                          ) : (
+                            <Volume2 className="w-4 h-4" />
+                          )}
+                        </div>
+                        <span className="font-medium text-gray-800 text-sm">
+                          {isMuted ? "Unmute Sound" : "Mute Sound"}
+                        </span>
+                      </div>
+                      <div
+                        className={`text-gray-400 ${
+                          isMuted ? "text-red-500" : ""
+                        }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
-                            {item.icon}
-                          </div>
-                          <span className="font-medium text-gray-800 text-sm">
-                            {item.name}
-                          </span>
+                        <Settings className="w-4 h-4" />
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => toggleSection("changeUsername")}
+                      className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
+                          <User className="w-4 h-4" />
                         </div>
-                        <div className="text-gray-400">
-                          <Settings className="w-4 h-4" />
+                        <span className="font-medium text-gray-800 text-sm">
+                          Change Username
+                        </span>
+                      </div>
+                      <div className="text-gray-400">
+                        <Settings className="w-4 h-4" />
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => toggleSection("information")}
+                      className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
+                          <Info className="w-4 h-4" />
                         </div>
-                      </button>
-                    ))}
+                        <span className="font-medium text-gray-800 text-sm">
+                          Information
+                        </span>
+                      </div>
+                      <div className="text-gray-400">
+                        <Settings className="w-4 h-4" />
+                      </div>
+                    </button>
                   </div>
                 </div>
               )}

@@ -187,7 +187,23 @@ export default function SwipeGame() {
       tapCount: 0,
     });
 
-    // Check double score availability from database with proper error handling
+    // First unmute with a longer transition
+    soundManager.setMuffled(false);
+
+    // Then after a short delay, play the background music
+    setTimeout(() => {
+      soundManager.play("background", {
+        muffled: false,
+        volume: 0.3, // Start at lower volume
+      });
+    }, 100);
+
+    // Gradually increase volume to normal
+    setTimeout(() => {
+      soundManager.setMuffled(false);
+    }, 500);
+
+    // Rest of your reset logic
     if (userId) {
       getShopItems(userId)
         .then((data) => {
@@ -200,7 +216,7 @@ export default function SwipeGame() {
         })
         .catch((error) => {
           console.error("Error getting shop items:", error);
-          setDoubleScoreActive(false); // Default to false on error
+          setDoubleScoreActive(false);
         });
     }
 
@@ -227,7 +243,7 @@ export default function SwipeGame() {
         const extraLiveAction = actions.find(
           (action) => action.type === "extraLive"
         );
-        setNextRareScore((prev) => prev + 50); // Small increment for frequent spawns
+        setNextRareScore((prev) => prev + 200); // Small increment for frequent spawns
         return {
           type: "extraLive",
           icon: extraLiveAction.icon,
@@ -397,29 +413,42 @@ export default function SwipeGame() {
     gameState.blocks,
   ]);
 
-  const handleSuccess = useCallback(
+  const handleBlockSuccess = useCallback(
     (blockId, blockType) => {
+      // Initialize sound manager on first interaction
+      soundManager.initialize();
+
       setGameState((prev) => {
         // Ensure we have valid blocks array
         const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
 
         if (prev.isInTutorial) {
+          // For tutorial blocks, just move to the next tutorial block
           if (prev.tutorialIndex < tutorialBlocks.length - 1) {
+            console.log(
+              "Moving to next tutorial block:",
+              prev.tutorialIndex + 1
+            ); // Debug log
             return {
               ...prev,
-              blocks: [],
+              blocks: [], // Clear blocks to allow new tutorial block to spawn
               tutorialIndex: prev.tutorialIndex + 1,
               transitioning: true,
             };
           } else {
+            // End of tutorial, transition to regular game
+            console.log("Ending tutorial, starting game"); // Debug log
+            soundManager.play("background");
             return {
               ...prev,
-              blocks: [],
+              blocks: [], // Clear blocks to allow game blocks to spawn
               isInTutorial: false,
               transitioning: true,
+              tutorialIndex: 0,
             };
           }
         } else {
+          // Regular game block handling
           if (blockType === "extraLive") {
             addShopItems(userId, "extra-lives", 1);
             return {
@@ -465,13 +494,15 @@ export default function SwipeGame() {
         }
       });
 
-      if (gameState.isInTutorial) {
-        setTimeout(() => {
-          setGameState((prev) => ({ ...prev, transitioning: false }));
-        }, 100);
-      }
+      // Add a small delay to reset transitioning state
+      setTimeout(() => {
+        setGameState((prev) => ({
+          ...prev,
+          transitioning: false,
+        }));
+      }, 100);
     },
-    [gameState.isInTutorial, userId, doubleScoreActive]
+    [userId, doubleScoreActive]
   );
 
   const handleInteraction = useCallback(
@@ -499,7 +530,7 @@ export default function SwipeGame() {
 
         // Helper function to handle successful swipes with animation
         const handleSwipeSuccess = (blockId, blockType) => {
-          // soundManager.play("swipe");
+          // soundManager.play("tap");
 
           setGameState((prev) => ({
             ...prev,
@@ -515,7 +546,7 @@ export default function SwipeGame() {
 
           requestAnimationFrame(() => {
             setTimeout(() => {
-              handleSuccess(blockId, blockType);
+              handleBlockSuccess(blockId, blockType);
             }, 150);
           });
         };
@@ -523,7 +554,7 @@ export default function SwipeGame() {
         if (block.type === "avoid") {
           // Special handling for avoid block in tutorial
           if (gameState.isInTutorial) {
-            handleSuccess(block.id, block.type);
+            handleBlockSuccess(block.id, block.type);
             return;
           }
 
@@ -559,7 +590,7 @@ export default function SwipeGame() {
 
           if (block.type === "doubleTap") {
             if (now - interactionState.lastTapTime < 300) {
-              handleSuccess(block.id, block.type);
+              handleBlockSuccess(block.id, block.type);
               setInteractionState((prev) => ({
                 ...prev,
                 lastTapTime: 0,
@@ -577,7 +608,7 @@ export default function SwipeGame() {
             block.type === "extraLive" ||
             block.type === "coins"
           ) {
-            handleSuccess(block.id, block.type);
+            handleBlockSuccess(block.id, block.type);
           }
         } else if (deltaTime < 250) {
           const absX = Math.abs(deltaX);
@@ -607,7 +638,7 @@ export default function SwipeGame() {
       gameState.isGameOver,
       interactionState.start,
       interactionState.lastTapTime,
-      handleSuccess,
+      handleBlockSuccess,
       userId,
     ]
   );
@@ -626,6 +657,24 @@ export default function SwipeGame() {
 
     handleDoubleScoreEnd();
   }, [gameState.isGameOver]);
+
+  // Add cleanup when game ends
+  useEffect(() => {
+    if (gameState.isGameOver) {
+      // Instead of stopping, muffle the background music
+      soundManager.setMuffled(true);
+    } else {
+      // Normal background music during gameplay
+      soundManager.setMuffled(false);
+    }
+  }, [gameState.isGameOver]);
+
+  // Add cleanup when component unmounts
+  useEffect(() => {
+    return () => {
+      soundManager.stopAll();
+    };
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen touch-none select-none">
