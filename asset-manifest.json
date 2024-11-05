@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/SwipeItGame/static/css/main.c8551a66.css",
-    "main.js": "/SwipeItGame/static/js/main.13006dfe.js",
+    "main.css": "/SwipeItGame/static/css/main.34e6ef5a.css",
+    "main.js": "/SwipeItGame/static/js/main.b7a3d88a.js",
     "static/js/453.538746d0.chunk.js": "/SwipeItGame/static/js/453.538746d0.chunk.js",
     "index.html": "/SwipeItGame/index.html",
-    "main.c8551a66.css.map": "/SwipeItGame/static/css/main.c8551a66.css.map",
-    "main.13006dfe.js.map": "/SwipeItGame/static/js/main.13006dfe.js.map",
+    "main.34e6ef5a.css.map": "/SwipeItGame/static/css/main.34e6ef5a.css.map",
+    "main.b7a3d88a.js.map": "/SwipeItGame/static/js/main.b7a3d88a.js.map",
     "453.538746d0.chunk.js.map": "/SwipeItGame/static/js/453.538746d0.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.c8551a66.css",
-    "static/js/main.13006dfe.js"
+    "static/css/main.34e6ef5a.css",
+    "static/js/main.b7a3d88a.js"
   ]
 }
