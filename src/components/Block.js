@@ -5,7 +5,7 @@ import {
   useMotionValue,
   useTransform,
 } from "framer-motion";
-import { Heart, CircleDollarSign } from "lucide-react";
+import { Heart, CircleDollarSign, Coins } from "lucide-react";
 import { soundManager } from "../utils/sound";
 
 export default function Block({
@@ -24,6 +24,7 @@ export default function Block({
   const [blockPosition, setBlockPosition] = useState(null);
   const interactionTimeoutRef = useRef(null);
   const [swipeStart, setSwipeStart] = useState(null);
+  const [coinAnimations, setCoinAnimations] = useState([]);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -151,6 +152,12 @@ export default function Block({
       setIsVisible(false);
       soundManager.play("collect");
 
+      if (block.type === "coins") {
+        const blockElement = e.currentTarget;
+        const rect = blockElement.getBoundingClientRect();
+        addCoinAnimation(rect);
+      }
+
       interactionTimeoutRef.current = setTimeout(() => {
         handleInteraction(e, "end", block);
       }, 400);
@@ -162,17 +169,28 @@ export default function Block({
         setIsHandled(false);
       }, 1500);
     } else if (block.type === "avoid") {
+      soundManager.play("avoidtap", {
+        playbackRate: 0.1,
+        volume: 1,
+        muffled: true,
+        frequency: 800,
+      });
+
+      soundManager.setMuffled(true, {
+        frequency: 800,
+        volume: 0.5,
+      });
+
       setIsHandled(true);
       setShowShatter(true);
       setIsAnimating(true);
       setIsVisible(false);
 
-      soundManager.play("avoidtap", {
-        playbackRate: 0.1,
-        volume: 0.2,
-      });
-
       handleInteraction(e, "end", block);
+
+      setTimeout(() => {
+        soundManager.setMuffled(false);
+      }, 500);
 
       setTimeout(() => {
         setIsAnimating(false);
@@ -184,6 +202,24 @@ export default function Block({
       handleInteraction(e, "end", block);
     }
   };
+
+  const addCoinAnimation = useCallback((rect) => {
+    const animationId = Date.now();
+    setCoinAnimations((prev) => [
+      ...prev,
+      {
+        id: animationId,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      },
+    ]);
+
+    setTimeout(() => {
+      setCoinAnimations((prev) =>
+        prev.filter((anim) => anim.id !== animationId)
+      );
+    }, 2000);
+  }, []);
 
   const shouldShake =
     !isInTutorial &&
@@ -368,6 +404,24 @@ export default function Block({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Coin Animations */}
+      {coinAnimations.map((anim) => (
+        <div
+          key={anim.id}
+          className="fixed pointer-events-none z-50"
+          style={{
+            left: anim.x,
+            top: anim.y,
+            transform: "translate(-50%, -50%)",
+            animation: "blockCoinFloat 2s ease-out forwards",
+          }}
+        >
+          <div className="flex items-center text-yellow-400 font-bold text-lg">
+            +15 <Coins className="w-5 h-5 ml-1" />
+          </div>
+        </div>
+      ))}
 
       <AnimatePresence>
         {(showShatter || isAnimating) && blockPosition && (

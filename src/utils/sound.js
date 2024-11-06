@@ -174,6 +174,11 @@ export const soundManager = new SoundManager();
 soundManager.add("background", "/assets/sounds/background.mp3", { loop: true });
 soundManager.add("tap", "/assets/sounds/tap.mp3", { loop: false });
 soundManager.add("avoidtap", "/assets/sounds/avoidtap.mp3", { loop: false });
+soundManager.add("super", "/assets/sounds/super.mp3");
+soundManager.add("wow", "/assets/sounds/wow.mp3");
+soundManager.add("amazing", "/assets/sounds/amazing.mp3");
+soundManager.add("extreme", "/assets/sounds/extreme.mp3");
+soundManager.add("fantastic", "/assets/sounds/fantastic.mp3");
 // Debug log to check the path
 console.log(
   "Audio path:",

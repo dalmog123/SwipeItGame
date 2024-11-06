@@ -51,6 +51,21 @@
   }
 }
 
+@keyframes blockCoinFloat {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  25% { /* Added longer pause */
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -200%) scale(1);
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
