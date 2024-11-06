@@ -169,12 +169,14 @@ export default function Block({
         setIsHandled(false);
       }, 1500);
     } else if (block.type === "avoid") {
-      soundManager.play("avoidtap", {
-        playbackRate: 0.1,
-        volume: 1,
-        muffled: true,
-        frequency: 800,
-      });
+      soundManager
+        .play("avoidtap", {
+          volume: 1,
+          muffled: true,
+        })
+        .catch((error) => {
+          console.error("Failed to play avoid sound:", error);
+        });
 
       soundManager.setMuffled(true, {
         frequency: 800,

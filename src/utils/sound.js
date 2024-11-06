@@ -6,8 +6,7 @@ class SoundManager {
     this.gainNode = null;
     this.filterNode = null;
     this.initialized = false;
-    this.isMuted = false;
-    this.previousVolume = null;
+    this.isMuted = localStorage.getItem("isMuted") === "true";
   }
 
   initialize() {
@@ -28,6 +27,15 @@ class SoundManager {
     // Connect nodes
     this.filterNode.connect(this.gainNode);
     this.gainNode.connect(this.audioContext.destination);
+
+    // Apply stored mute state to all sounds
+    if (this.isMuted) {
+      this.sounds.forEach((sound) => {
+        if (sound && sound.audio) {
+          sound.audio.muted = true;
+        }
+      });
+    }
 
     this.initialized = true;
 
@@ -153,12 +161,30 @@ class SoundManager {
   toggleMute() {
     this.isMuted = !this.isMuted;
 
+    // Initialize if not already initialized
+    if (!this.initialized) {
+      this.initialize();
+    }
+
+    // Only try to resume audioContext if it exists and is suspended
+    if (this.audioContext && this.audioContext.state === "suspended") {
+      this.audioContext.resume();
+    }
+
+    // Handle background music if it exists
+    if (this.currentBgMusic) {
+      this.currentBgMusic.audio.muted = this.isMuted;
+    }
+
     // Mute/unmute all current sounds
     this.sounds.forEach((sound) => {
-      if (sound) {
+      if (sound && sound.audio) {
         sound.audio.muted = this.isMuted;
       }
     });
+
+    // Store mute state in localStorage for persistence
+    localStorage.setItem("isMuted", this.isMuted.toString());
 
     return this.isMuted;
   }
