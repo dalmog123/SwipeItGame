@@ -35,6 +35,10 @@ import {
 import { defaultAchievements } from "./config/achievements";
 // Importing sound utility
 import { soundManager } from "./utils/sound";
+// Importing themes
+import { scoreThemes, getThemeForScore } from "./config/themes";
+// Importing framer-motion
+import { motion, AnimatePresence } from "framer-motion";
 // Defining the game actions
 const actions = [
   { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
@@ -512,9 +516,17 @@ export default function SwipeGame() {
 
   const handleInteraction = useCallback(
     async (e, type, block) => {
-      e.preventDefault();
+      // Only call preventDefault if it exists (for touch events)
+      if (e.preventDefault && typeof e.preventDefault === "function") {
+        e.preventDefault();
+      }
+
       if (gameState.isGameOver) return;
-      const point = e.touches?.[0] || e.changedTouches?.[0] || e;
+
+      // Handle both touch and mouse events
+      const point = e.type?.includes("mouse")
+        ? e
+        : e.touches?.[0] || e.changedTouches?.[0] || e;
 
       if (type === "start") {
         setInteractionState((prev) => ({
@@ -566,17 +578,20 @@ export default function SwipeGame() {
           // First check for extra life
           const hasExtraLife = await checkAndConsumeExtraLife(userId);
 
-          if (hasExtraLife) {
-            // If user has extra life, just remove the block without freezing
-            setGameState((prev) => ({
-              ...prev,
-              blocks: prev.blocks.filter((b) => b.id !== block.id),
-            }));
-          } else {
-            // Only freeze if no extra life is available
-            setGameState((prev) => ({ ...prev, isFrozen: true }));
+          // Always freeze first
+          setGameState((prev) => ({ ...prev, isFrozen: true }));
 
-            // Wait 1 second before game over
+          if (hasExtraLife) {
+            // If user has extra life, remove the block after animation
+            setTimeout(() => {
+              setGameState((prev) => ({
+                ...prev,
+                blocks: prev.blocks.filter((b) => b.id !== block.id),
+                isFrozen: false, // Unfreeze after animation
+              }));
+            }, 1000);
+          } else {
+            // No extra life available, proceed to game over after animation
             setTimeout(() => {
               setGameState((prev) => ({
                 ...prev,
@@ -690,8 +705,25 @@ export default function SwipeGame() {
     setIsMuted(muted);
   }, []);
 
+  // Add new state for current theme
+  const [currentTheme, setCurrentTheme] = useState(scoreThemes[0]);
+
+  // Add effect to handle theme changes based on score
+  useEffect(() => {
+    const newTheme = getThemeForScore(gameState.score);
+    if (newTheme && newTheme.threshold !== currentTheme.threshold) {
+      setCurrentTheme(newTheme);
+    }
+  }, [gameState.score]);
+
   return (
-    <div className="flex flex-col min-h-screen touch-none select-none">
+    <motion.div
+      className="flex flex-col min-h-screen touch-none select-none"
+      animate={{
+        backgroundColor: currentTheme.background,
+      }}
+      transition={{ duration: 1.5, ease: "easeInOut" }}
+    >
       {!gameState.isGameOver && (
         <div className="flex">
           <Header
@@ -733,17 +765,21 @@ export default function SwipeGame() {
       </div>
 
       {!gameState.isGameOver && (
-        <div className="flex-1 flex flex-col items-center justify-center bg-gray-100 overflow-hidden">
+        <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
           <div>
             <div className="flex flex-col gap-4 px-4 pt-4 overflow-hidden">
               {(gameState.blocks || []).map((block) => (
                 <Block
                   key={block.id}
-                  block={block}
+                  block={{
+                    ...block,
+                    color: currentTheme.blocks[block.type],
+                  }}
                   handleInteraction={handleInteraction}
                   isInTutorial={gameState.isInTutorial}
                   isTransitioning={gameState.transitioning}
                   isFrozen={gameState.isFrozen && block.type !== "avoid"}
+                  currentTheme={currentTheme}
                 />
               ))}
             </div>
@@ -767,6 +803,6 @@ export default function SwipeGame() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

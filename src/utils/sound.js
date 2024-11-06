@@ -173,7 +173,7 @@ export const soundManager = new SoundManager();
 // Add your sounds
 soundManager.add("background", "/assets/sounds/background.mp3", { loop: true });
 soundManager.add("tap", "/assets/sounds/tap.mp3", { loop: false });
-
+soundManager.add("avoidtap", "/assets/sounds/avoidtap.mp3", { loop: false });
 // Debug log to check the path
 console.log(
   "Audio path:",
