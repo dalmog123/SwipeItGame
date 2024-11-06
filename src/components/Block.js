@@ -94,15 +94,6 @@ export default function Block({
     }
   };
 
-  const resetBlockState = () => {
-    setIsAnimating(false);
-    setIsHandled(false);
-    x.set(0);
-    y.set(0);
-    setSwipeStart(null);
-    setIsTapped(false);
-  };
-
   const handleTouchEnd = (e) => {
     if (
       isTransitioning ||
@@ -111,7 +102,6 @@ export default function Block({
       isAnimating
     )
       return;
-
     setIsTapped(false);
     setSwipeStart(null);
 
@@ -124,7 +114,36 @@ export default function Block({
       height: rect.height,
     });
 
-    // Handle special blocks first
+    const swipeThreshold = 50;
+    const currentX = x.get();
+    const currentY = y.get();
+
+    const isCorrectSwipe =
+      (block.type === "swipeLeft" && currentX < -swipeThreshold) ||
+      (block.type === "swipeRight" && currentX > swipeThreshold) ||
+      (block.type === "swipeUp" && currentY < -swipeThreshold) ||
+      (block.type === "swipeDown" && currentY > swipeThreshold);
+
+    if (isCorrectSwipe) {
+      const swipeAnimation = getSwipeAnimation(block.type);
+      x.set(swipeAnimation.x || 0);
+      y.set(swipeAnimation.y || 0);
+      handleInteraction(e, "end", block);
+    } else {
+      x.set(0, {
+        type: "spring",
+        stiffness: 1000,
+        damping: 35,
+        duration: 0.2,
+      });
+      y.set(0, {
+        type: "spring",
+        stiffness: 1000,
+        damping: 35,
+        duration: 0.2,
+      });
+    }
+
     if (block.type === "extraLive" || block.type === "coins") {
       setIsHandled(true);
       setShowShatter(true);
@@ -142,10 +161,7 @@ export default function Block({
         setBlockPosition(null);
         setIsHandled(false);
       }, 1500);
-      return;
-    }
-
-    if (block.type === "avoid") {
+    } else if (block.type === "avoid") {
       setIsHandled(true);
       setShowShatter(true);
       setIsAnimating(true);
@@ -164,74 +180,13 @@ export default function Block({
         setBlockPosition(null);
         setIsHandled(false);
       }, 1500);
-      return;
-    }
-
-    // Handle tap blocks
-    if (["tap", "doubleTap"].includes(block.type)) {
+    } else if (!isCorrectSwipe) {
       handleInteraction(e, "end", block);
-      return;
-    }
-
-    // Handle swipe blocks
-    const swipeThreshold = 5;
-    const currentX = x.get();
-    const currentY = y.get();
-
-    const isCorrectSwipe =
-      (block.type === "swipeLeft" && currentX < -swipeThreshold) ||
-      (block.type === "swipeRight" && currentX > swipeThreshold) ||
-      (block.type === "swipeUp" && currentY < -swipeThreshold) ||
-      (block.type === "swipeDown" && currentY > swipeThreshold);
-
-    if (isCorrectSwipe) {
-      setIsAnimating(true);
-      setIsHandled(true);
-      const swipeAnimation = getSwipeAnimation(block.type);
-
-      handleInteraction(e, "end", block);
-
-      x.set(swipeAnimation.x || 0, {
-        type: "spring",
-        stiffness: 200,
-        damping: 20,
-      });
-      y.set(swipeAnimation.y || 0, {
-        type: "spring",
-        stiffness: 200,
-        damping: 20,
-      });
-
-      setTimeout(resetBlockState, 1000);
-    } else {
-      // Reset position with spring animation
-      setIsAnimating(true);
-      x.set(0, {
-        type: "spring",
-        stiffness: 400,
-        damping: 25,
-        duration: 0.2,
-      });
-      y.set(0, {
-        type: "spring",
-        stiffness: 400,
-        damping: 25,
-        duration: 0.2,
-      });
-
-      setTimeout(resetBlockState, 300);
     }
   };
 
-  useEffect(() => {
-    return () => {
-      resetBlockState();
-    };
-  }, []);
-
   const shouldShake =
     !isInTutorial &&
-    !swipeStart &&
     (Date.now() - block?.createdAt) / 1000 >=
       (block?.type === "avoid" ||
       block?.type === "extraLive" ||
@@ -346,7 +301,7 @@ export default function Block({
           >
             <motion.div
               className={`rounded-lg shadow-lg flex items-center justify-center ${
-                shouldShake && !isAnimating ? "animate-shake" : ""
+                shouldShake ? "animate-shake" : ""
               }`}
               style={{
                 width: "80vw",
@@ -368,14 +323,14 @@ export default function Block({
               transition={{
                 x: {
                   type: "spring",
-                  stiffness: 400,
-                  damping: 25,
+                  stiffness: 1000,
+                  damping: 35,
                   duration: 0.2,
                 },
                 y: {
                   type: "spring",
-                  stiffness: 400,
-                  damping: 25,
+                  stiffness: 1000,
+                  damping: 35,
                   duration: 0.2,
                 },
                 backgroundColor: { duration: 1.5, ease: "easeInOut" },
@@ -387,42 +342,12 @@ export default function Block({
                   ? "y"
                   : false
               }
-              dragConstraints={{
-                left: -50, // Limit left drag to 50px
-                right: 50, // Limit right drag to 50px
-                top: -50, // Limit up drag to 50px
-                bottom: 50, // Limit down drag to 50px
-              }}
-              dragElastic={0.3} // Reduced from 0.6 to make it less stretchy
-              dragMomentum={true}
-              onTouchStart={(e) => {
-                if (
-                  ["tap", "doubleTap", "extraLive", "coins", "avoid"].includes(
-                    block.type
-                  )
-                ) {
-                  handleTouchStart(e);
-                } else {
-                  setIsAnimating(true);
-                  handleTouchStart(e);
-                  setTimeout(() => setIsAnimating(false), 100);
-                }
-              }}
+              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+              dragElastic={0.1}
+              onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              onMouseDown={(e) => {
-                if (
-                  ["tap", "doubleTap", "extraLive", "coins", "avoid"].includes(
-                    block.type
-                  )
-                ) {
-                  handleMouseDown(e);
-                } else {
-                  setIsAnimating(true);
-                  handleMouseDown(e);
-                  setTimeout(() => setIsAnimating(false), 100);
-                }
-              }}
+              onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
