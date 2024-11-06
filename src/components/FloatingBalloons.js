@@ -1,22 +1,23 @@
 // FloatingBalloon.js
-import React from 'react';
-import { motion } from 'framer-motion';
+import React from "react";
+import { motion } from "framer-motion";
 
-const FloatingBalloon = ({ icon, delay, index, onPop }) => {
+const FloatingBalloon = ({ icon, delay, index, onPop, id }) => {
   return (
     <motion.div
+      id={id}
       className="absolute"
-      initial={{ y: '100vh' }}
-      animate={{ y: '-100vh' }}
+      initial={{ y: "100vh" }}
+      animate={{ y: "-100vh" }}
       transition={{
         duration: 10,
         repeat: Infinity,
         delay: delay,
-        ease: 'linear',
+        ease: "linear",
       }}
       style={{
         left: `${29 * index}%`,
-        filter: 'blur(1px)',
+        filter: "blur(1px)",
       }}
       onClick={onPop}
     >

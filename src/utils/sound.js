@@ -23,7 +23,7 @@ class SoundManager {
 
     // Configure filter for muffled effect
     this.filterNode.type = "lowpass";
-    this.filterNode.frequency.value = 500; // Your desired initial frequency
+    this.filterNode.frequency.value = 200; // Your desired initial frequency
 
     // Connect nodes
     this.filterNode.connect(this.gainNode);
@@ -107,8 +107,8 @@ class SoundManager {
     const transitionDuration = 1.0; // 1 second transition
 
     // Target values
-    const targetFreq = enabled ? 500 : 1500;
-    const targetVol = enabled ? 0.3 : 0.8;
+    const targetFreq = enabled ? 200 : 1500;
+    const targetVol = enabled ? 0.2 : 0.7;
 
     // Get current values
     const currentFreq = this.filterNode.frequency.value;
@@ -153,23 +153,17 @@ class SoundManager {
   toggleMute() {
     this.isMuted = !this.isMuted;
 
-    if (this.isMuted) {
-      // Store current volume for unmuting later
-      this.previousVolume = this.gainNode.gain.value;
-      this.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-    } else {
-      // Restore previous volume
-      const restoreVolume = this.previousVolume || 0.8;
-      this.gainNode.gain.setValueAtTime(
-        restoreVolume,
-        this.audioContext.currentTime
-      );
-    }
+    // Mute/unmute all current sounds
+    this.sounds.forEach((sound) => {
+      if (sound) {
+        sound.audio.muted = this.isMuted;
+      }
+    });
 
     return this.isMuted;
   }
 
-  isSoundMuted() {
+  getMuteState() {
     return this.isMuted;
   }
 }

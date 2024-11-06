@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useTransform,
+} from "framer-motion";
 import { Heart, CircleDollarSign } from "lucide-react";
 import { soundManager } from "../utils/sound";
 
@@ -13,11 +18,19 @@ export default function Block({
   const [isTapped, setIsTapped] = useState(false);
   const [showShatter, setShowShatter] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [animationProps, setAnimationProps] = useState(null);
   const [isHandled, setIsHandled] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [blockPosition, setBlockPosition] = useState(null);
   const interactionTimeoutRef = useRef(null);
+  const [swipeStart, setSwipeStart] = useState(null);
+
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const opacity = useTransform([x, y], ([latestX, latestY]) => {
+    const distance = Math.sqrt(latestX ** 2 + latestY ** 2);
+    return 1 - Math.min(distance / 100, 0.5);
+  });
 
   const getSwipeAnimation = useCallback((type) => {
     switch (type) {
@@ -38,23 +51,46 @@ export default function Block({
     if (block?.id) {
       setShowShatter(false);
       setIsVisible(true);
-      setAnimationProps(null);
       setIsHandled(false);
       setIsAnimating(false);
+      x.set(0);
+      y.set(0);
     }
     return () => {
       if (interactionTimeoutRef.current) {
         clearTimeout(interactionTimeoutRef.current);
       }
     };
-  }, [block?.id]);
+  }, [block?.id, x, y]);
 
   const handleTouchStart = (e) => {
     if (isTransitioning || (isFrozen && block.type !== "avoid")) return;
     if (["tap", "doubleTap", "extraLive", "coins"].includes(block.type)) {
       setIsTapped(true);
     }
+    const touch = e.touches[0];
+    setSwipeStart({ x: touch.clientX, y: touch.clientY });
     handleInteraction(e, "start", block);
+  };
+
+  const handleTouchMove = (e) => {
+    if (
+      !swipeStart ||
+      isTransitioning ||
+      (isFrozen && block.type !== "avoid") ||
+      isHandled ||
+      isAnimating
+    )
+      return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - swipeStart.x;
+    const deltaY = touch.clientY - swipeStart.y;
+
+    if (block.type === "swipeLeft" || block.type === "swipeRight") {
+      x.set(deltaX);
+    } else if (block.type === "swipeUp" || block.type === "swipeDown") {
+      y.set(deltaY);
+    }
   };
 
   const handleTouchEnd = (e) => {
@@ -66,6 +102,7 @@ export default function Block({
     )
       return;
     setIsTapped(false);
+    setSwipeStart(null);
 
     const blockElement = e.currentTarget;
     const rect = blockElement.getBoundingClientRect();
@@ -75,6 +112,24 @@ export default function Block({
       width: rect.width,
       height: rect.height,
     });
+
+    const swipeThreshold = 50; // Adjust this value as needed
+    const currentX = x.get();
+    const currentY = y.get();
+
+    const isCorrectSwipe =
+      (block.type === "swipeLeft" && currentX < -swipeThreshold) ||
+      (block.type === "swipeRight" && currentX > swipeThreshold) ||
+      (block.type === "swipeUp" && currentY < -swipeThreshold) ||
+      (block.type === "swipeDown" && currentY > swipeThreshold);
+
+    if (isCorrectSwipe) {
+      handleInteraction(e, "end", block);
+    } else {
+      // Bounce back animation
+      x.set(0, { type: "spring", stiffness: 500, damping: 25 });
+      y.set(0, { type: "spring", stiffness: 500, damping: 25 });
+    }
 
     if (block.type === "extraLive" || block.type === "coins") {
       setIsHandled(true);
@@ -108,7 +163,7 @@ export default function Block({
         setBlockPosition(null);
         setIsHandled(false);
       }, 1500);
-    } else {
+    } else if (!isCorrectSwipe) {
       handleInteraction(e, "end", block);
     }
   };
@@ -196,20 +251,20 @@ export default function Block({
                 maxWidth: "550px",
                 height: "7vh",
                 backgroundColor: block.color || "#000000",
-                opacity: block.isBeingSwiped ? 0.8 : isFrozen ? 0.5 : 1,
+                opacity: isFrozen && block.type !== "avoid" ? 0.5 : opacity,
                 pointerEvents:
                   (isFrozen && block.type !== "avoid") || isAnimating
                     ? "none"
                     : "auto",
+                x,
+                y,
               }}
               animate={block.isBeingSwiped ? getSwipeAnimation(block.type) : {}}
               whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
               onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              onMouseDown={handleTouchStart}
-              onMouseUp={handleTouchEnd}
-              onMouseLeave={handleTouchEnd}
             >
               {block.icon && <block.icon size="6vh" color="white" />}
             </motion.div>

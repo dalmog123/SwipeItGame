@@ -20,20 +20,25 @@ const Information = ({ onClose }) => {
   const [isScrolledDown, setIsScrolledDown] = useState(false);
   const contentRef = useRef(null);
 
+  const handleScrollTo = (position) => {
+    if (!contentRef.current) return;
+    contentRef.current.scrollTo({
+      top: position === "top" ? 0 : contentRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       if (!contentRef.current) return;
-
       const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 20;
       setIsScrolledDown(isNearBottom);
     };
 
     const contentElement = contentRef.current;
     if (contentElement) {
       contentElement.addEventListener("scroll", handleScroll);
-      // Initial check
       handleScroll();
     }
 
@@ -46,11 +51,11 @@ const Information = ({ onClose }) => {
 
   const blocks = [
     {
-      icon: <Circle className="w-4 h-4 text-black" />,
+      icon: <Circle className="w-4 h-4 text-white" />,
       name: "Tap",
       description: "Tap once to score",
       bgColor: "bg-[#FFBE0B]",
-      textColor: "text-black",
+      textColor: "text-white",
     },
     {
       icon: <CircleDot className="w-4 h-4 text-white" />,
@@ -95,11 +100,11 @@ const Information = ({ onClose }) => {
       textColor: "text-white",
     },
     {
-      icon: <Coins className="w-4 h-4 text-yellow-500" />,
+      icon: <Coins className="w-4 h-4 text-white" />,
       name: "Coins",
       description: "Gives 15 gold coins",
       bgColor: "bg-[#22d65e]",
-      textColor: "text-yellow-900",
+      textColor: "text-white",
     },
     {
       icon: <X className="w-4 h-4 text-white" />,
@@ -124,10 +129,16 @@ const Information = ({ onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="relative max-w-md w-full">
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div
-          className="bg-white rounded-lg w-full max-h-[80vh] overflow-y-auto"
+          className="bg-white rounded-lg w-full max-h-[80vh] overflow-y-auto relative"
           ref={contentRef}
         >
           <div className="p-6 space-y-6">
@@ -206,8 +217,8 @@ const Information = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Close Button */}
-          <div className="border-t p-4">
+          {/* Fixed Close Button Section */}
+          <div className="sticky bottom-0 border-t bg-white p-4">
             <button
               onClick={onClose}
               className="w-full py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
@@ -217,16 +228,17 @@ const Information = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Scroll Indicator - Changed from fixed to absolute */}
-        <div className="absolute -bottom-0 right-2 animate-bounce-gentle">
-          <div className="bg-purple-600 rounded-full p-2 shadow-lg">
-            {isScrolledDown ? (
-              <ChevronUp className="w-5 h-5 text-white" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-white" />
-            )}
-          </div>
-        </div>
+        {/* Fixed Scroll Button */}
+        <button
+          onClick={() => handleScrollTo(isScrolledDown ? "top" : "bottom")}
+          className="absolute bottom-[4.5rem] right-4 animate-bounce-gentle bg-purple-600 rounded-full p-2 shadow-lg hover:bg-purple-700 transition-colors"
+        >
+          {isScrolledDown ? (
+            <ChevronUp className="w-5 h-5 text-white" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-white" />
+          )}
+        </button>
       </div>
     </div>
   );

@@ -11,6 +11,8 @@ import {
   X,
   Heart,
   CircleDollarSign,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 // Importing your custom components
 import Header from "./components/Header";
@@ -187,21 +189,24 @@ export default function SwipeGame() {
       tapCount: 0,
     });
 
-    // First unmute with a longer transition
-    soundManager.setMuffled(false);
-
-    // Then after a short delay, play the background music
-    setTimeout(() => {
-      soundManager.play("background", {
-        muffled: false,
-        volume: 0.3, // Start at lower volume
-      });
-    }, 100);
-
-    // Gradually increase volume to normal
-    setTimeout(() => {
+    // Only play sounds if not muted
+    if (!soundManager.getMuteState()) {
+      // First unmute with a longer transition
       soundManager.setMuffled(false);
-    }, 500);
+
+      // Then after a short delay, play the background music
+      setTimeout(() => {
+        soundManager.play("background", {
+          muffled: false,
+          volume: 0.3, // Start at lower volume
+        });
+      }, 100);
+
+      // Gradually increase volume to normal
+      setTimeout(() => {
+        soundManager.setMuffled(false);
+      }, 500);
+    }
 
     // Rest of your reset logic
     if (userId) {
@@ -676,6 +681,15 @@ export default function SwipeGame() {
     };
   }, []);
 
+  // Add state for mute
+  const [isMuted, setIsMuted] = useState(soundManager.getMuteState());
+
+  // Add mute toggle handler
+  const handleMuteToggle = useCallback(() => {
+    const muted = soundManager.toggleMute();
+    setIsMuted(muted);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen touch-none select-none">
       {!gameState.isGameOver && (
@@ -690,6 +704,20 @@ export default function SwipeGame() {
         </div>
       )}
 
+      {/* Add Mute Button - Only show when not in tutorial */}
+      {!gameState.isInTutorial && !gameState.isGameOver && (
+        <button
+          onClick={handleMuteToggle}
+          className="fixed top-[10vh] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
+        >
+          {isMuted ? (
+            <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+          ) : (
+            <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+          )}
+        </button>
+      )}
+
       <div>
         {gameState.isGameOver && (
           <div>
@@ -697,6 +725,8 @@ export default function SwipeGame() {
               score={gameState.score}
               resetGame={resetGame}
               userId={userId}
+              isMuted={isMuted}
+              setIsMuted={setIsMuted}
             />
           </div>
         )}

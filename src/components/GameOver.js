@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { BsFillBalloonHeartFill } from "react-icons/bs";
-import { Trophy, ChevronRight } from "lucide-react";
+import { Trophy, ChevronRight, Coins } from "lucide-react";
 import ScoreBoard from "./ScoreBoard";
 import Achievement from "./Achievements";
 import FloatingBalloon from "./FloatingBalloons";
@@ -16,7 +16,13 @@ import {
 } from "../api/gameoverAPI";
 import { defaultAchievements } from "../config/achievements";
 
-export default function GameOver({ score, resetGame, userId }) {
+export default function GameOver({
+  score,
+  resetGame,
+  userId,
+  isMuted,
+  setIsMuted,
+}) {
   const [showScore, setShowScore] = useState(false);
   const [scoreBoard, setScoreBoard] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState(null);
@@ -53,6 +59,7 @@ export default function GameOver({ score, resetGame, userId }) {
   const [achievementQueue, setAchievementQueue] = useState([]);
   const [currentAchievement, setCurrentAchievement] = useState(null);
   const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [coinAnimations, setCoinAnimations] = useState([]);
 
   useEffect(() => {
     setFloatingElements([
@@ -368,37 +375,52 @@ export default function GameOver({ score, resetGame, userId }) {
   }, []); // Run only once on mount
 
   const handlePopBalloon = useCallback(
-    (index) => {
-      const newBalloons = [...floatingElements];
-      newBalloons[index].popped = true;
-      setFloatingElements(newBalloons);
+    async (index) => {
+      if (!userId) return;
 
-      // Update balloonsPoppedCount and achievements
-      setBalloonsPoppedCount((prevCount) => {
-        // Get the actual previous count
-        const newCount = (prevCount || 0) + 1;
-
-        // Update achievements with the new balloon count
-        const updatedAchievements = achievements.map((achievement) =>
-          achievement.id === "balloonPopper"
-            ? { ...achievement, progress: newCount }
-            : achievement
+      try {
+        // Update balloon state
+        setFloatingElements((prev) =>
+          prev.map((el, i) => (i === index ? { ...el, popped: true } : el))
         );
 
-        if (userId) {
-          // Update database with both the count and achievements
-          updateUserData(userId, {
-            balloonsPoppedCount: newCount,
-            achievements: updatedAchievements,
-          });
+        // Add coin animation at the balloon's position
+        const balloonElement = document.getElementById(`balloon-${index}`);
+        if (balloonElement) {
+          const rect = balloonElement.getBoundingClientRect();
+          const animationId = Date.now();
+          setCoinAnimations((prev) => [
+            ...prev,
+            {
+              id: animationId,
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2,
+            },
+          ]);
+
+          // Remove animation after it completes
+          setTimeout(() => {
+            setCoinAnimations((prev) =>
+              prev.filter((anim) => anim.id !== animationId)
+            );
+          }, 1000);
         }
 
-        setAchievements(updatedAchievements);
-        checkAndAwardAchievements(updatedAchievements);
-        return newCount;
-      });
+        // Update balloon count and coins
+        const userData = await getUserData(userId);
+        const updates = {
+          balloonsPoppedCount: (userData?.balloonsPoppedCount || 0) + 1,
+          coins: (userData?.coins || 0) + 5,
+          totalCoinsEarned: (userData?.totalCoinsEarned || 0) + 5,
+        };
+
+        await updateUserData(userId, updates);
+        setBalloonsPoppedCount((prev) => prev + 1);
+      } catch (error) {
+        console.error("Error handling balloon pop:", error);
+      }
     },
-    [userId, achievements, floatingElements, checkAndAwardAchievements]
+    [userId]
   );
 
   const handleScoreBoard = () => {
@@ -548,6 +570,36 @@ export default function GameOver({ score, resetGame, userId }) {
     }
   }, [currentAchievement]);
 
+  useEffect(() => {
+    const handleGameOver = () => {
+      // First burst
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFBE0B"],
+      });
+
+      // Second burst after a small delay
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.6 },
+        });
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.6 },
+        });
+      }, 150);
+    };
+
+    handleGameOver();
+  }, []); // Run only once on mount
+
   return (
     <div>
       {!scoreBoard ? (
@@ -557,6 +609,8 @@ export default function GameOver({ score, resetGame, userId }) {
             coins={coins}
             onCoinsChange={handleCoinsChange}
             userId={userId}
+            isMuted={isMuted}
+            setIsMuted={setIsMuted}
           />
           {currentAchievement && (
             <AchievementsNotification
@@ -648,6 +702,25 @@ export default function GameOver({ score, resetGame, userId }) {
               Swipe Again!
             </motion.button>
 
+            {/* Coin Animations */}
+            {coinAnimations.map((anim) => (
+              <div
+                key={anim.id}
+                className="fixed pointer-events-none"
+                style={{
+                  left: anim.x,
+                  top: anim.y,
+                  transform: "translate(-50%, -50%)",
+                  animation: "coinFloat 1s ease-out forwards",
+                }}
+              >
+                <div className="flex items-center text-purple-700 font-bold">
+                  +5 <Coins className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            ))}
+
+            {/* Floating Balloons */}
             {floatingElements.map(
               (el, index) =>
                 !el.popped && (
@@ -657,6 +730,7 @@ export default function GameOver({ score, resetGame, userId }) {
                     delay={el.delay}
                     index={index}
                     onPop={() => handlePopBalloon(index)}
+                    id={`balloon-${index}`}
                   />
                 )
             )}

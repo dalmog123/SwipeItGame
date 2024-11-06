@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Trophy,
   Store,
@@ -27,14 +27,17 @@ const Achievements = ({
   currentAchievements = [],
   onCoinsChange,
   userId,
+  isMuted,
+  setIsMuted,
 }) => {
   const [activeTab, setActiveTab] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
   const [purchasedItems, setPurchasedItems] = useState({});
   const [localAchievements, setLocalAchievements] =
     useState(currentAchievements);
-  const [isMuted, setIsMuted] = useState(false);
   const [showInformation, setShowInformation] = useState(false);
+  const [isScrolledDown, setIsScrolledDown] = useState(false);
+  const achievementsListRef = useRef(null);
 
   const toggleTab = (tab) => {
     setActiveTab(activeTab === tab ? null : tab);
@@ -219,15 +222,51 @@ const Achievements = ({
   // Add validation when displaying coins
   const displayCoins = isNaN(coins) ? 0 : Number(coins);
 
-  const handleMuteToggle = () => {
+  const handleMuteToggle = useCallback(() => {
     const muted = soundManager.toggleMute();
-    setIsMuted(muted);
-  };
+    if (setIsMuted) {
+      setIsMuted(muted);
+    }
+  }, [setIsMuted]);
 
   const handleInformationClick = () => {
     setShowInformation(true);
     setActiveTab(null); // Close the settings panel
   };
+
+  // Add scroll handler function
+  const handleScrollTo = (position) => {
+    if (!achievementsListRef.current) return;
+    achievementsListRef.current.scrollTo({
+      top: position === "top" ? 0 : achievementsListRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  };
+
+  // Improved scroll tracking
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!achievementsListRef.current) return;
+      const { scrollTop, scrollHeight, clientHeight } =
+        achievementsListRef.current;
+      // Check if we're near the bottom (within 20px)
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 20;
+      setIsScrolledDown(isNearBottom);
+    };
+
+    const listElement = achievementsListRef.current;
+    if (listElement) {
+      listElement.addEventListener("scroll", handleScroll);
+      // Initial check
+      handleScroll();
+    }
+
+    return () => {
+      if (listElement) {
+        listElement.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [activeTab]); // Added activeTab as dependency to reinitialize when tab changes
 
   return (
     <>
@@ -287,54 +326,71 @@ const Achievements = ({
                       <Trophy className="w-5 h-5" /> Achievements
                     </h3>
                   </div>
-                  <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
-                    {" "}
-                    {/* Added max-height and overflow */}
-                    {localAchievements?.map((achievement) => (
-                      <div
-                        key={achievement?.id || Math.random()}
-                        className="p-2 rounded-lg bg-white/50 hover:bg-white/70 transition-all"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
-                              {getAchievementIcon(achievement.id)}
+                  <div className="relative">
+                    <div
+                      ref={achievementsListRef}
+                      className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto"
+                    >
+                      {localAchievements?.map((achievement) => (
+                        <div
+                          key={achievement?.id || Math.random()}
+                          className="p-2 rounded-lg bg-white/50 hover:bg-white/70 transition-all"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
+                                {getAchievementIcon(achievement.id)}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-800 text-sm">
+                                  {achievement.title}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  {achievement.description}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-800 text-sm">
-                                {achievement.title}
-                              </p>
-                              <p className="text-xs text-gray-600">
-                                {achievement.description}
-                              </p>
+                            {renderStars(achievement)}
+                          </div>
+                          <div className="mt-2">
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-blue-500 to-green-500"
+                                style={{
+                                  width: `${Math.min(
+                                    getProgress(achievement) || 0,
+                                    100
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="flex justify-between items-center mt-1">
+                              <span className="text-xs text-gray-600">
+                                {achievement?.progress || 0} /{" "}
+                                {getNextLevel(achievement) || 0}
+                              </span>
+                              {/* <span className="text-xs text-gray-600">
+                                {Math.round(getProgress(achievement) || 0)}%
+                              </span> */}
                             </div>
                           </div>
-                          {renderStars(achievement)}
                         </div>
-                        <div className="mt-2">
-                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-blue-500 to-green-500"
-                              style={{
-                                width: `${Math.min(
-                                  getProgress(achievement) || 0,
-                                  100
-                                )}%`,
-                              }}
-                            />
-                          </div>
-                          <div className="flex justify-between items-center mt-1">
-                            <span className="text-xs text-gray-600">
-                              {achievement?.progress || 0} /{" "}
-                              {getNextLevel(achievement) || 0}
-                            </span>
-                            <span className="text-xs text-gray-600">
-                              {Math.round(getProgress(achievement) || 0)}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+
+                    {/* Scroll Button */}
+                    <button
+                      onClick={() =>
+                        handleScrollTo(isScrolledDown ? "top" : "bottom")
+                      }
+                      className="absolute bottom-2 right-2 animate-bounce-gentle bg-blue-600 rounded-full p-1.5 shadow-lg hover:bg-blue-700 transition-colors"
+                    >
+                      {isScrolledDown ? (
+                        <ChevronUp className="w-4 h-4 text-white" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-white" />
+                      )}
+                    </button>
                   </div>
                 </div>
               )}
