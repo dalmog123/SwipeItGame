@@ -222,12 +222,10 @@ const Achievements = ({
   // Add validation when displaying coins
   const displayCoins = isNaN(coins) ? 0 : Number(coins);
 
-  const handleMuteToggle = useCallback(() => {
+  const handleMuteToggle = () => {
     const muted = soundManager.toggleMute();
-    if (setIsMuted) {
-      setIsMuted(muted);
-    }
-  }, [setIsMuted]);
+    setIsMuted(muted);
+  };
 
   const handleInformationClick = () => {
     setShowInformation(true);
@@ -498,19 +496,21 @@ const Achievements = ({
                     >
                       <div className="flex items-center gap-2">
                         <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
-                          {isMuted ? (
+                          {soundManager.getMuteState() ? (
                             <VolumeX className="w-4 h-4" />
                           ) : (
                             <Volume2 className="w-4 h-4" />
                           )}
                         </div>
                         <span className="font-medium text-gray-800 text-sm">
-                          {isMuted ? "Unmute Sound" : "Mute Sound"}
+                          {soundManager.getMuteState()
+                            ? "Unmute Sound"
+                            : "Mute Sound"}
                         </span>
                       </div>
                       <div
                         className={`text-gray-400 ${
-                          isMuted ? "text-red-500" : ""
+                          soundManager.getMuteState() ? "text-red-500" : ""
                         }`}
                       >
                         <Settings className="w-4 h-4" />

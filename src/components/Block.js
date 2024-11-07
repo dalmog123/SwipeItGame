@@ -169,19 +169,16 @@ export default function Block({
         setIsHandled(false);
       }, 1500);
     } else if (block.type === "avoid") {
-      soundManager
-        .play("avoidtap", {
-          volume: 1,
-          muffled: true,
-        })
-        .catch((error) => {
-          console.error("Failed to play avoid sound:", error);
-        });
-
-      soundManager.setMuffled(true, {
-        frequency: 800,
-        volume: 0.5,
+      soundManager.play("avoidtap", {
+        volume: 0.6,
       });
+
+      setTimeout(() => {
+        soundManager.setMuffled(true, {
+          frequency: 200,
+          volume: 0.2,
+        });
+      }, 100);
 
       setIsHandled(true);
       setShowShatter(true);
@@ -189,10 +186,6 @@ export default function Block({
       setIsVisible(false);
 
       handleInteraction(e, "end", block);
-
-      setTimeout(() => {
-        soundManager.setMuffled(false);
-      }, 500);
 
       setTimeout(() => {
         setIsAnimating(false);

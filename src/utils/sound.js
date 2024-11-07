@@ -7,44 +7,40 @@ class SoundManager {
     this.filterNode = null;
     this.initialized = false;
     this.isMuted = localStorage.getItem("isMuted") === "true";
+    this.isTransitioning = false;
   }
 
-  initialize() {
+  async initialize() {
     if (this.initialized) return;
 
-    // Create audio context
-    this.audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      this.audioContext = new AudioContext({
+        latencyHint: "interactive",
+        sampleRate: 44100,
+      });
 
-    // Create audio effects
-    this.gainNode = this.audioContext.createGain();
-    this.filterNode = this.audioContext.createBiquadFilter();
+      this.gainNode = this.audioContext.createGain();
+      this.filterNode = this.audioContext.createBiquadFilter();
+      this.filterNode.type = "lowpass";
+      this.filterNode.connect(this.gainNode);
+      this.gainNode.connect(this.audioContext.destination);
 
-    // Configure filter for muffled effect
-    this.filterNode.type = "lowpass";
-    this.filterNode.frequency.value = 200; // Your desired initial frequency
+      if (this.audioContext.state === "suspended") {
+        await this.audioContext.resume();
+      }
 
-    // Connect nodes
-    this.filterNode.connect(this.gainNode);
-    this.gainNode.connect(this.audioContext.destination);
-
-    // Apply stored mute state to all sounds
-    if (this.isMuted) {
       this.sounds.forEach((sound) => {
         if (sound && sound.audio) {
-          sound.audio.muted = true;
+          sound.audio.muted = this.isMuted;
+          sound.audio.volume = this.isMuted ? 0 : sound.options?.volume || 1;
         }
       });
+
+      this.initialized = true;
+    } catch (error) {
+      console.error("Audio initialization failed:", error);
     }
-
-    this.initialized = true;
-
-    // Reconnect any existing sounds
-    this.sounds.forEach((sound) => {
-      if (!sound.source) {
-        sound.source = this.audioContext.createMediaElementSource(sound.audio);
-      }
-    });
   }
 
   add(name, path, options = {}) {
@@ -61,86 +57,149 @@ class SoundManager {
 
   async play(name, effects = { muffled: false, volume: 1 }) {
     if (!this.initialized) {
-      this.initialize();
+      await this.initialize();
     }
 
     const sound = this.sounds.get(name);
     if (!sound) return;
 
     try {
-      // Initialize source if not already done
-      if (!sound.source) {
-        sound.source = this.audioContext.createMediaElementSource(sound.audio);
-      }
+      if (name === "avoidtap") {
+        const audio = sound.audio.cloneNode();
+        audio.volume = effects.volume || 1;
 
-      if (sound.options.loop) {
-        if (this.currentBgMusic && this.currentBgMusic !== sound) {
-          await this.currentBgMusic.audio.pause();
-          this.currentBgMusic.audio.currentTime = 0;
+        // Play immediately without waiting for transitions
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.error("Error playing avoid sound:", error);
+          });
         }
-        this.currentBgMusic = sound;
-      }
-
-      // Resume AudioContext if it's suspended
-      if (this.audioContext.state === "suspended") {
-        await this.audioContext.resume();
-      }
-
-      // Connect source to effects chain
-      sound.source.disconnect();
-      if (effects.muffled) {
-        sound.source.connect(this.filterNode);
-        this.filterNode.frequency.value = 1500;
-        this.gainNode.gain.value = effects.volume;
-      } else {
-        sound.source.connect(this.gainNode);
-        this.gainNode.gain.value = effects.volume;
+        return audio;
       }
 
       if (sound.audio.paused) {
         sound.audio.currentTime = 0;
-        await sound.audio.play();
+        sound.audio.muted = this.isMuted;
+        sound.audio.volume = this.isMuted ? 0 : effects.volume || 1;
+
+        const playPromise = sound.audio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
       }
     } catch (error) {
-      console.log("Audio play failed:", error);
+      console.error(`Failed to play ${name}:`, error);
     }
   }
 
-  setMuffled(enabled) {
-    if (!this.initialized || !this.currentBgMusic) return;
+  async setMuffled(enabled, options = {}) {
+    if (!this.initialized || this.isTransitioning) return;
 
-    const currentTime = this.audioContext.currentTime;
+    try {
+      this.isTransitioning = true;
+      const currentTime = this.audioContext.currentTime;
+      const transitionDuration = enabled ? 1.5 : 2.0; // Longer transition when muffling for game over
 
-    // Longer, smoother transition time
-    const transitionDuration = 1.0; // 1 second transition
+      const targetFreq = enabled ? options.frequency || 200 : 1500;
+      const targetVol = enabled ? options.volume || 0.2 : 0.7;
 
-    // Target values
-    const targetFreq = enabled ? 200 : 1500;
-    const targetVol = enabled ? 0.2 : 0.7;
+      // Cancel any ongoing transitions
+      this.filterNode.frequency.cancelScheduledValues(currentTime);
+      this.gainNode.gain.cancelScheduledValues(currentTime);
 
-    // Get current values
-    const currentFreq = this.filterNode.frequency.value;
-    const currentVol = this.gainNode.gain.value;
+      // Get current values
+      const currentFreq = this.filterNode.frequency.value;
+      const currentVol = this.gainNode.gain.value;
 
-    // Cancel any scheduled values
-    this.filterNode.frequency.cancelScheduledValues(currentTime);
-    this.gainNode.gain.cancelScheduledValues(currentTime);
+      // Set starting points
+      this.filterNode.frequency.setValueAtTime(currentFreq, currentTime);
+      this.gainNode.gain.setValueAtTime(currentVol, currentTime);
 
-    // Set starting points
-    this.filterNode.frequency.setValueAtTime(currentFreq, currentTime);
-    this.gainNode.gain.setValueAtTime(currentVol, currentTime);
+      // Create smoother frequency transition with curve
+      if (enabled) {
+        // Gradual frequency decrease for muffling
+        const steps = 30; // More steps for smoother transition
+        const stepDuration = transitionDuration / steps;
 
-    // Smooth exponential transition for frequency
-    this.filterNode.frequency.exponentialRampToValueAtTime(
-      targetFreq,
-      currentTime + transitionDuration
-    );
+        for (let i = 0; i <= steps; i++) {
+          const time = currentTime + i * stepDuration;
+          const progress = i / steps;
+          // Use easeInOutQuad for smoother transition
+          const easeProgress =
+            progress < 0.5
+              ? 2 * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+          const freqValue =
+            currentFreq + (targetFreq - currentFreq) * easeProgress;
 
-    // Smooth linear transition for volume
-    this.gainNode.gain.linearRampToValueAtTime(
-      targetVol,
-      currentTime + transitionDuration
-    );
+          this.filterNode.frequency.setValueAtTime(freqValue, time);
+        }
+      } else {
+        // Quick unmuffling
+        this.filterNode.frequency.exponentialRampToValueAtTime(
+          targetFreq,
+          currentTime + transitionDuration
+        );
+      }
+
+      // Volume transition
+      if (enabled) {
+        // Gradual volume decrease for muffling
+        const steps = 30;
+        const stepDuration = transitionDuration / steps;
+
+        for (let i = 0; i <= steps; i++) {
+          const time = currentTime + i * stepDuration;
+          const progress = i / steps;
+          // Use easeInOutQuad
+          const easeProgress =
+            progress < 0.5
+              ? 2 * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+          const volumeValue =
+            currentVol + (targetVol - currentVol) * easeProgress;
+
+          this.gainNode.gain.setValueAtTime(volumeValue, time);
+        }
+      } else {
+        // Use linear ramp for unmuffling
+        this.gainNode.gain.linearRampToValueAtTime(
+          targetVol,
+          currentTime + transitionDuration
+        );
+      }
+
+      // Update all sounds with new volume using the same smooth transition
+      this.sounds.forEach((sound) => {
+        if (sound && sound.audio) {
+          const targetSoundVol = enabled ? 0.2 : sound.options?.volume || 1;
+          const initialVolume = sound.audio.volume;
+          const volumeDiff = targetSoundVol - initialVolume;
+          const steps = 30;
+          const stepDuration = transitionDuration / steps;
+
+          for (let i = 0; i <= steps; i++) {
+            setTimeout(() => {
+              const progress = i / steps;
+              const easeProgress =
+                progress < 0.5
+                  ? 2 * progress * progress
+                  : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+              sound.audio.volume = initialVolume + volumeDiff * easeProgress;
+            }, i * stepDuration * 1000);
+          }
+        }
+      });
+
+      // Release the transition lock after the transition completes
+      setTimeout(() => {
+        this.isTransitioning = false;
+      }, transitionDuration * 1000);
+    } catch (error) {
+      console.error("Error setting muffled state:", error);
+      this.isTransitioning = false;
+    }
   }
 
   stop(name) {
@@ -158,33 +217,37 @@ class SoundManager {
     });
   }
 
-  toggleMute() {
+  async toggleMute() {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
     this.isMuted = !this.isMuted;
 
-    // Initialize if not already initialized
-    if (!this.initialized) {
-      this.initialize();
-    }
+    try {
+      this.sounds.forEach((sound) => {
+        if (sound && sound.audio) {
+          sound.audio.muted = this.isMuted;
+          sound.audio.volume = this.isMuted ? 0 : sound.options?.volume || 1;
+        }
+      });
 
-    // Only try to resume audioContext if it exists and is suspended
-    if (this.audioContext && this.audioContext.state === "suspended") {
-      this.audioContext.resume();
-    }
-
-    // Handle background music if it exists
-    if (this.currentBgMusic) {
-      this.currentBgMusic.audio.muted = this.isMuted;
-    }
-
-    // Mute/unmute all current sounds
-    this.sounds.forEach((sound) => {
-      if (sound && sound.audio) {
-        sound.audio.muted = this.isMuted;
+      if (this.currentBgMusic) {
+        this.currentBgMusic.muted = this.isMuted;
+        this.currentBgMusic.volume = this.isMuted ? 0 : 0.3; // Background music volume
       }
-    });
 
-    // Store mute state in localStorage for persistence
-    localStorage.setItem("isMuted", this.isMuted.toString());
+      if (this.gainNode) {
+        this.gainNode.gain.setValueAtTime(
+          this.isMuted ? 0 : 1,
+          this.audioContext.currentTime
+        );
+      }
+
+      localStorage.setItem("isMuted", this.isMuted.toString());
+    } catch (error) {
+      console.error("Error toggling mute:", error);
+    }
 
     return this.isMuted;
   }
@@ -192,11 +255,22 @@ class SoundManager {
   getMuteState() {
     return this.isMuted;
   }
+
+  async unlockAudio() {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    const buffer = this.audioContext.createBuffer(1, 1, 22050);
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.audioContext.destination);
+    source.start(0);
+  }
 }
 
 export const soundManager = new SoundManager();
 
-// Add your sounds
 soundManager.add("background", "/assets/sounds/background.mp3", { loop: true });
 soundManager.add("tap", "/assets/sounds/tap.mp3", { loop: false });
 soundManager.add("avoidtap", "/assets/sounds/avoidtap.mp3", { loop: false });
@@ -205,7 +279,6 @@ soundManager.add("wow", "/assets/sounds/wow.mp3");
 soundManager.add("amazing", "/assets/sounds/amazing.mp3");
 soundManager.add("extreme", "/assets/sounds/extreme.mp3");
 soundManager.add("fantastic", "/assets/sounds/fantastic.mp3");
-// Debug log to check the path
 console.log(
   "Audio path:",
   `${process.env.PUBLIC_URL}/assets/sounds/background.mp3`

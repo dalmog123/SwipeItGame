@@ -745,6 +745,23 @@ export default function SwipeGame() {
     // }
   }, [gameState.score]);
 
+  useEffect(() => {
+    // Unlock audio on first user interaction
+    const unlockAudio = async () => {
+      await soundManager.unlockAudio();
+      document.removeEventListener("touchstart", unlockAudio);
+      document.removeEventListener("click", unlockAudio);
+    };
+
+    document.addEventListener("touchstart", unlockAudio);
+    document.addEventListener("click", unlockAudio);
+
+    return () => {
+      document.removeEventListener("touchstart", unlockAudio);
+      document.removeEventListener("click", unlockAudio);
+    };
+  }, []);
+
   return (
     <motion.div
       className="flex flex-col min-h-screen touch-none select-none"
@@ -771,7 +788,7 @@ export default function SwipeGame() {
           onClick={handleMuteToggle}
           className="fixed top-[10vh] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
         >
-          {isMuted ? (
+          {soundManager.getMuteState() ? (
             <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
           ) : (
             <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
