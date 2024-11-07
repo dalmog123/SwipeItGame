@@ -295,7 +295,7 @@ class SoundManager {
         return;
       }
 
-      // Create and play a silent buffer
+      // Create and play a single silent buffer instead of all sounds
       const buffer = this.audioContext.createBuffer(1, 1, 22050);
       const source = this.audioContext.createBufferSource();
       source.buffer = buffer;
@@ -307,29 +307,39 @@ class SoundManager {
         await this.audioContext.resume();
       }
 
-      // Pre-load all sounds for iOS
+      // Pre-load sounds without playing them
       for (const [_, sound] of this.sounds) {
         if (sound && sound.audio) {
           sound.audio.load();
+          sound.audio.muted = true; // Ensure sounds are muted during pre-load
+          sound.audio.volume = 0; // Set volume to 0 as additional safety
+
+          // Just load the audio without playing
           try {
-            const playPromise = sound.audio.play();
-            if (playPromise !== undefined) {
-              await playPromise;
-              sound.audio.pause();
-              sound.audio.currentTime = 0;
-            }
+            await sound.audio.load();
           } catch (error) {
             console.warn("Error pre-loading sound:", error);
           }
         }
       }
 
+      // Reset mute state after pre-loading
+      this.sounds.forEach((sound) => {
+        if (sound && sound.audio) {
+          sound.audio.muted = this.isMuted;
+          sound.audio.volume = this.isMuted ? 0 : sound.options?.volume || 1;
+        }
+      });
+
       this.audioUnlocked = true;
 
       // Remove event listeners
-      document.removeEventListener("touchstart", this.unlockAudioIOS);
-      document.removeEventListener("touchend", this.unlockAudioIOS);
-      document.removeEventListener("click", this.unlockAudioIOS);
+      document.removeEventListener(
+        "touchstart",
+        this.unlockAudioIOS.bind(this)
+      );
+      document.removeEventListener("touchend", this.unlockAudioIOS.bind(this));
+      document.removeEventListener("click", this.unlockAudioIOS.bind(this));
     } catch (error) {
       console.error("Error unlocking iOS audio:", error);
     }
