@@ -29,11 +29,6 @@ export default function Block({
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  const opacity = useTransform([x, y], ([latestX, latestY]) => {
-    const distance = Math.sqrt(latestX ** 2 + latestY ** 2);
-    return 1 - Math.min(distance / 100, 0.5);
-  });
-
   const getSwipeAnimation = useCallback((type) => {
     switch (type) {
       case "swipeLeft":
@@ -126,8 +121,9 @@ export default function Block({
       (block.type === "swipeDown" && currentY > swipeThreshold);
 
     if (isCorrectSwipe) {
-      setIsVisible(false);
-      setIsHandled(true);
+      const swipeAnimation = getSwipeAnimation(block.type);
+      x.set(swipeAnimation.x || 0);
+      y.set(swipeAnimation.y || 0);
       handleInteraction(e, "end", block);
     } else {
       x.set(0, {
@@ -320,13 +316,13 @@ export default function Block({
 
   return (
     <>
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {isVisible && block && (
           <motion.div
             className="relative"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8, transition: { duration: 0 } }}
+            exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.2 }}
           >
             <motion.div
@@ -338,7 +334,7 @@ export default function Block({
                 maxWidth: "550px",
                 height: "7vh",
                 backgroundColor: block.color || "#000000",
-                opacity: isFrozen && block.type !== "avoid" ? 0.5 : opacity,
+                opacity: isFrozen && block.type !== "avoid" ? 0.5 : 1,
                 pointerEvents:
                   (isFrozen && block.type !== "avoid") || isAnimating
                     ? "none"
