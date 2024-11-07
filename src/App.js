@@ -718,26 +718,26 @@ export default function SwipeGame() {
 
   // Add this effect after your other useEffects
   useEffect(() => {
-    if (gameState.score === 1000) {
-      soundManager.play("super", {
-        volume: 0.4, // Reduced from default volume
-      });
-    }
-    if (gameState.score === 3000) {
-      soundManager.play("wow", {
-        volume: 0.4, // Reduced from default volume
-      });
-    }
-    if (gameState.score === 5000) {
-      soundManager.play("amazing", {
-        volume: 0.4, // Reduced from default volume
-      });
-    }
-    if (gameState.score === 10000) {
-      soundManager.play("extreme", {
-        volume: 0.4, // Reduced from default volume
-      });
-    }
+    // if (gameState.score === 1000) {
+    //   soundManager.play("super", {
+    //     volume: 0.4, // Reduced from default volume
+    //   });
+    // }
+    // if (gameState.score === 3000) {
+    //   soundManager.play("wow", {
+    //     volume: 0.4, // Reduced from default volume
+    //   });
+    // }
+    // if (gameState.score === 5000) {
+    //   soundManager.play("amazing", {
+    //     volume: 0.4, // Reduced from default volume
+    //   });
+    // }
+    // if (gameState.score === 10000) {
+    //   soundManager.play("extreme", {
+    //     volume: 0.4, // Reduced from default volume
+    //   });
+    // }
     // if (gameState.score === 500) {
     //   soundManager.play("fantastic", {
     //     volume: 0.4, // Reduced from default volume

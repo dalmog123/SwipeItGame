@@ -126,9 +126,8 @@ export default function Block({
       (block.type === "swipeDown" && currentY > swipeThreshold);
 
     if (isCorrectSwipe) {
-      const swipeAnimation = getSwipeAnimation(block.type);
-      x.set(swipeAnimation.x || 0);
-      y.set(swipeAnimation.y || 0);
+      setIsVisible(false);
+      setIsHandled(true);
       handleInteraction(e, "end", block);
     } else {
       x.set(0, {
@@ -321,13 +320,13 @@ export default function Block({
 
   return (
     <>
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isVisible && block && (
           <motion.div
             className="relative"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
+            exit={{ opacity: 0, scale: 0.8, transition: { duration: 0 } }}
             transition={{ duration: 0.2 }}
           >
             <motion.div
