@@ -630,7 +630,7 @@ export default function SwipeGame() {
           ) {
             handleBlockSuccess(block.id, block.type);
           }
-        } else if (deltaTime < 250) {
+        } else if (deltaTime < 5000) {
           const absX = Math.abs(deltaX);
           const absY = Math.abs(deltaY);
 

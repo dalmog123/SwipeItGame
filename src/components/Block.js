@@ -117,13 +117,13 @@ export default function Block({
     const currentX = x.get();
     const currentY = y.get();
 
-    const isCorrectSwipe =
+    const isBeyondThreshold =
       (block.type === "swipeLeft" && currentX < -swipeThreshold) ||
       (block.type === "swipeRight" && currentX > swipeThreshold) ||
       (block.type === "swipeUp" && currentY < -swipeThreshold) ||
       (block.type === "swipeDown" && currentY > swipeThreshold);
 
-    if (isCorrectSwipe) {
+    if (isBeyondThreshold) {
       const swipeAnimation = getSwipeAnimation(block.type);
       x.set(swipeAnimation.x || 0);
       y.set(swipeAnimation.y || 0);
@@ -191,7 +191,7 @@ export default function Block({
         setBlockPosition(null);
         setIsHandled(false);
       }, 1500);
-    } else if (!isCorrectSwipe) {
+    } else if (!isBeyondThreshold) {
       handleInteraction(e, "end", block);
     }
   };
@@ -335,7 +335,7 @@ export default function Block({
               style={{
                 width: "80vw",
                 maxWidth: "550px",
-                height: "7vh",
+                height: "9vh",
                 backgroundColor: block.color || "#000000",
                 opacity: isFrozen && block.type !== "avoid" ? 0.5 : 1,
                 pointerEvents:
