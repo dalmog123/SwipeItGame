@@ -8,6 +8,8 @@ class SoundManager {
     this.initialized = false;
     this.isMuted = localStorage.getItem("isMuted") === "true";
     this.isTransitioning = false;
+    this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    this.audioUnlocked = false;
   }
 
   async initialize() {
@@ -20,16 +22,22 @@ class SoundManager {
         sampleRate: 44100,
       });
 
+      // Create audio nodes
       this.gainNode = this.audioContext.createGain();
       this.filterNode = this.audioContext.createBiquadFilter();
       this.filterNode.type = "lowpass";
       this.filterNode.connect(this.gainNode);
       this.gainNode.connect(this.audioContext.destination);
 
+      // Set initial states
+      this.filterNode.frequency.value = 1500;
+      this.gainNode.gain.value = this.isMuted ? 0 : 1;
+
       if (this.audioContext.state === "suspended") {
         await this.audioContext.resume();
       }
 
+      // Initialize all sounds
       this.sounds.forEach((sound) => {
         if (sound && sound.audio) {
           sound.audio.muted = this.isMuted;
@@ -66,9 +74,15 @@ class SoundManager {
     try {
       if (name === "avoidtap") {
         const audio = sound.audio.cloneNode();
-        audio.volume = effects.volume || 1;
+        audio.muted = this.isMuted;
+        audio.volume = this.isMuted ? 0 : effects.volume || 1;
 
-        // Play immediately without waiting for transitions
+        if (this.isIOS) {
+          if (this.audioContext.state === "suspended") {
+            await this.audioContext.resume();
+          }
+        }
+
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise.catch((error) => {
@@ -225,10 +239,20 @@ class SoundManager {
     this.isMuted = !this.isMuted;
 
     try {
+      if (this.isIOS) {
+        if (this.audioContext.state === "suspended") {
+          await this.audioContext.resume();
+        }
+      }
+
       this.sounds.forEach((sound) => {
         if (sound && sound.audio) {
           sound.audio.muted = this.isMuted;
-          sound.audio.volume = this.isMuted ? 0 : sound.options?.volume || 1;
+          if (!this.isMuted) {
+            setTimeout(() => {
+              sound.audio.volume = sound.options?.volume || 1;
+            }, 50);
+          }
         }
       });
 
@@ -256,16 +280,88 @@ class SoundManager {
     return this.isMuted;
   }
 
-  async unlockAudio() {
-    if (!this.initialized) {
-      await this.initialize();
-    }
+  async unlockAudioIOS() {
+    if (this.audioUnlocked || !this.isIOS) return;
 
-    const buffer = this.audioContext.createBuffer(1, 1, 22050);
-    const source = this.audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(this.audioContext.destination);
-    source.start(0);
+    try {
+      // Ensure audio context is initialized first
+      if (!this.initialized) {
+        await this.initialize();
+      }
+
+      // Only proceed if audioContext exists
+      if (!this.audioContext) {
+        console.warn("Audio context not available");
+        return;
+      }
+
+      // Create and play a silent buffer
+      const buffer = this.audioContext.createBuffer(1, 1, 22050);
+      const source = this.audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(this.audioContext.destination);
+      source.start(0);
+
+      // Resume audio context if needed
+      if (this.audioContext.state === "suspended") {
+        await this.audioContext.resume();
+      }
+
+      // Pre-load all sounds for iOS
+      for (const [_, sound] of this.sounds) {
+        if (sound && sound.audio) {
+          sound.audio.load();
+          try {
+            const playPromise = sound.audio.play();
+            if (playPromise !== undefined) {
+              await playPromise;
+              sound.audio.pause();
+              sound.audio.currentTime = 0;
+            }
+          } catch (error) {
+            console.warn("Error pre-loading sound:", error);
+          }
+        }
+      }
+
+      this.audioUnlocked = true;
+
+      // Remove event listeners
+      document.removeEventListener("touchstart", this.unlockAudioIOS);
+      document.removeEventListener("touchend", this.unlockAudioIOS);
+      document.removeEventListener("click", this.unlockAudioIOS);
+    } catch (error) {
+      console.error("Error unlocking iOS audio:", error);
+    }
+  }
+
+  async unlockAudio() {
+    try {
+      // Ensure initialization happens first
+      if (!this.initialized) {
+        await this.initialize();
+      }
+
+      if (this.isIOS) {
+        await this.unlockAudioIOS();
+      } else {
+        // General audio unlock for other devices
+        if (this.audioContext && this.audioContext.state === "suspended") {
+          await this.audioContext.resume();
+        }
+
+        // Only create buffer if audioContext exists
+        if (this.audioContext) {
+          const buffer = this.audioContext.createBuffer(1, 1, 22050);
+          const source = this.audioContext.createBufferSource();
+          source.buffer = buffer;
+          source.connect(this.audioContext.destination);
+          source.start(0);
+        }
+      }
+    } catch (error) {
+      console.error("Error unlocking audio:", error);
+    }
   }
 }
 
