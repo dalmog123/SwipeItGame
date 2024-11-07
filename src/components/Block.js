@@ -333,9 +333,9 @@ export default function Block({
                 shouldShake && !isInteracting ? "animate-shake" : ""
               }`}
               style={{
-                width: "80vw",
+                width: "90vw",
                 maxWidth: "550px",
-                height: "9vh",
+                height: "8.5vh",
                 backgroundColor: block.color || "#000000",
                 opacity: isFrozen && block.type !== "avoid" ? 0.5 : 1,
                 pointerEvents:
