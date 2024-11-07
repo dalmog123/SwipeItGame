@@ -25,6 +25,7 @@ export default function Block({
   const interactionTimeoutRef = useRef(null);
   const [swipeStart, setSwipeStart] = useState(null);
   const [coinAnimations, setCoinAnimations] = useState([]);
+  const [isInteracting, setIsInteracting] = useState(false);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -62,6 +63,7 @@ export default function Block({
 
   const handleTouchStart = (e) => {
     if (isTransitioning || (isFrozen && block.type !== "avoid")) return;
+    setIsInteracting(true);
     if (["tap", "doubleTap", "extraLive", "coins"].includes(block.type)) {
       setIsTapped(true);
     }
@@ -91,6 +93,7 @@ export default function Block({
   };
 
   const handleTouchEnd = (e) => {
+    setIsInteracting(false);
     if (
       isTransitioning ||
       (isFrozen && block.type !== "avoid") ||
@@ -327,7 +330,7 @@ export default function Block({
           >
             <motion.div
               className={`rounded-lg shadow-lg flex items-center justify-center ${
-                shouldShake ? "animate-shake" : ""
+                shouldShake && !isInteracting ? "animate-shake" : ""
               }`}
               style={{
                 width: "80vw",
