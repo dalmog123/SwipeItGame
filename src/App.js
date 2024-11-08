@@ -517,16 +517,16 @@ export default function SwipeGame() {
   const handleInteraction = useCallback(
     async (e, type, block) => {
       // Only call preventDefault if it exists (for touch events)
-      if (e.preventDefault && typeof e.preventDefault === "function") {
+      if (e.type.startsWith("touch") && e.preventDefault) {
         e.preventDefault();
       }
 
       if (gameState.isGameOver) return;
 
       // Handle both touch and mouse events
-      const point = e.type?.includes("mouse")
-        ? e
-        : e.touches?.[0] || e.changedTouches?.[0] || e;
+      const point = e.type.startsWith("touch")
+        ? e.touches[0] || e.changedTouches[0]
+        : e;
 
       if (type === "start") {
         setInteractionState((prev) => ({

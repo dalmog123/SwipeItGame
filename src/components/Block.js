@@ -26,6 +26,7 @@ export default function Block({
   const [swipeStart, setSwipeStart] = useState(null);
   const [coinAnimations, setCoinAnimations] = useState([]);
   const [isInteracting, setIsInteracting] = useState(false);
+  const [isMouseDown, setIsMouseDown] = useState(false);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -61,6 +62,107 @@ export default function Block({
     };
   }, [block?.id, x, y]);
 
+  const addCoinAnimation = useCallback((rect) => {
+    const animationId = Date.now();
+    setCoinAnimations((prev) => [
+      ...prev,
+      {
+        id: animationId,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      },
+    ]);
+
+    setTimeout(() => {
+      setCoinAnimations((prev) =>
+        prev.filter((anim) => anim.id !== animationId)
+      );
+    }, 2000);
+  }, []);
+
+  const handleBlockInteraction = useCallback(
+    (e, interactionType) => {
+      if (
+        isTransitioning ||
+        (isFrozen && block.type !== "avoid") ||
+        isHandled ||
+        isAnimating
+      )
+        return;
+
+      setIsTapped(false);
+      setSwipeStart(null);
+
+      const blockElement = e.currentTarget;
+      const rect = blockElement.getBoundingClientRect();
+      setBlockPosition({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      });
+
+      if (block.type === "extraLive" || block.type === "coins") {
+        setIsHandled(true);
+        setShowShatter(true);
+        setIsAnimating(true);
+        setIsVisible(false);
+        soundManager.play("collect");
+
+        if (block.type === "coins") {
+          addCoinAnimation(rect);
+        }
+
+        interactionTimeoutRef.current = setTimeout(() => {
+          handleInteraction(e, "end", block);
+        }, 400);
+
+        setTimeout(() => {
+          setIsAnimating(false);
+          setShowShatter(false);
+          setBlockPosition(null);
+          setIsHandled(false);
+        }, 1500);
+      } else if (block.type === "avoid") {
+        soundManager.play("avoidtap", {
+          volume: 0.6,
+        });
+
+        setTimeout(() => {
+          soundManager.setMuffled(true, {
+            frequency: 200,
+            volume: 0.2,
+          });
+        }, 100);
+
+        setIsHandled(true);
+        setShowShatter(true);
+        setIsAnimating(true);
+        setIsVisible(false);
+
+        handleInteraction(e, "end", block);
+
+        setTimeout(() => {
+          setIsAnimating(false);
+          setShowShatter(false);
+          setBlockPosition(null);
+          setIsHandled(false);
+        }, 1500);
+      } else {
+        handleInteraction(e, interactionType, block);
+      }
+    },
+    [
+      block,
+      isTransitioning,
+      isFrozen,
+      isHandled,
+      isAnimating,
+      handleInteraction,
+      addCoinAnimation,
+    ]
+  );
+
   const handleTouchStart = (e) => {
     if (isTransitioning || (isFrozen && block.type !== "avoid")) return;
     setIsInteracting(true);
@@ -94,125 +196,52 @@ export default function Block({
 
   const handleTouchEnd = (e) => {
     setIsInteracting(false);
+    handleBlockInteraction(e, "end");
+  };
+
+  const handleMouseDown = (e) => {
+    if (isTransitioning || (isFrozen && block.type !== "avoid")) return;
+    setIsMouseDown(true);
+    setIsInteracting(true);
+    if (["tap", "doubleTap", "extraLive", "coins"].includes(block.type)) {
+      setIsTapped(true);
+    }
+    setSwipeStart({ x: e.clientX, y: e.clientY });
+    handleInteraction(e, "start", block);
+  };
+
+  const handleMouseMove = (e) => {
     if (
+      !isMouseDown ||
+      !swipeStart ||
       isTransitioning ||
       (isFrozen && block.type !== "avoid") ||
       isHandled ||
       isAnimating
     )
       return;
-    setIsTapped(false);
-    setSwipeStart(null);
+    const deltaX = e.clientX - swipeStart.x;
+    const deltaY = e.clientY - swipeStart.y;
 
-    const blockElement = e.currentTarget;
-    const rect = blockElement.getBoundingClientRect();
-    setBlockPosition({
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-    });
-
-    const swipeThreshold = 50;
-    const currentX = x.get();
-    const currentY = y.get();
-
-    const isBeyondThreshold =
-      (block.type === "swipeLeft" && currentX < -swipeThreshold) ||
-      (block.type === "swipeRight" && currentX > swipeThreshold) ||
-      (block.type === "swipeUp" && currentY < -swipeThreshold) ||
-      (block.type === "swipeDown" && currentY > swipeThreshold);
-
-    if (isBeyondThreshold) {
-      const swipeAnimation = getSwipeAnimation(block.type);
-      x.set(swipeAnimation.x || 0);
-      y.set(swipeAnimation.y || 0);
-      handleInteraction(e, "end", block);
-    } else {
-      x.set(0, {
-        type: "spring",
-        stiffness: 1000,
-        damping: 35,
-        duration: 0.2,
-      });
-      y.set(0, {
-        type: "spring",
-        stiffness: 1000,
-        damping: 35,
-        duration: 0.2,
-      });
-    }
-
-    if (block.type === "extraLive" || block.type === "coins") {
-      setIsHandled(true);
-      setShowShatter(true);
-      setIsAnimating(true);
-      setIsVisible(false);
-      soundManager.play("collect");
-
-      if (block.type === "coins") {
-        const blockElement = e.currentTarget;
-        const rect = blockElement.getBoundingClientRect();
-        addCoinAnimation(rect);
-      }
-
-      interactionTimeoutRef.current = setTimeout(() => {
-        handleInteraction(e, "end", block);
-      }, 400);
-
-      setTimeout(() => {
-        setIsAnimating(false);
-        setShowShatter(false);
-        setBlockPosition(null);
-        setIsHandled(false);
-      }, 1500);
-    } else if (block.type === "avoid") {
-      soundManager.play("avoidtap", {
-        volume: 0.6,
-      });
-
-      setTimeout(() => {
-        soundManager.setMuffled(true, {
-          frequency: 200,
-          volume: 0.2,
-        });
-      }, 100);
-
-      setIsHandled(true);
-      setShowShatter(true);
-      setIsAnimating(true);
-      setIsVisible(false);
-
-      handleInteraction(e, "end", block);
-
-      setTimeout(() => {
-        setIsAnimating(false);
-        setShowShatter(false);
-        setBlockPosition(null);
-        setIsHandled(false);
-      }, 1500);
-    } else if (!isBeyondThreshold) {
-      handleInteraction(e, "end", block);
+    if (block.type === "swipeLeft" || block.type === "swipeRight") {
+      x.set(deltaX);
+    } else if (block.type === "swipeUp" || block.type === "swipeDown") {
+      y.set(deltaY);
     }
   };
 
-  const addCoinAnimation = useCallback((rect) => {
-    const animationId = Date.now();
-    setCoinAnimations((prev) => [
-      ...prev,
-      {
-        id: animationId,
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      },
-    ]);
+  const handleMouseUp = (e) => {
+    if (!isMouseDown) return;
+    setIsMouseDown(false);
+    setIsInteracting(false);
+    handleBlockInteraction(e, "end");
+  };
 
-    setTimeout(() => {
-      setCoinAnimations((prev) =>
-        prev.filter((anim) => anim.id !== animationId)
-      );
-    }, 2000);
-  }, []);
+  const handleMouseLeave = (e) => {
+    if (isMouseDown) {
+      handleMouseUp(e);
+    }
+  };
 
   const shouldShake =
     !isInTutorial &&
@@ -277,46 +306,6 @@ export default function Block({
     );
   };
 
-  const handleMouseDown = (e) => {
-    if (isTransitioning || (isFrozen && block.type !== "avoid")) return;
-    if (["tap", "doubleTap", "extraLive", "coins"].includes(block.type)) {
-      setIsTapped(true);
-    }
-    setSwipeStart({ x: e.clientX, y: e.clientY });
-    handleInteraction(e, "start", block);
-  };
-
-  const handleMouseMove = (e) => {
-    if (
-      !swipeStart ||
-      isTransitioning ||
-      (isFrozen && block.type !== "avoid") ||
-      isHandled ||
-      isAnimating
-    )
-      return;
-    const deltaX = e.clientX - swipeStart.x;
-    const deltaY = e.clientY - swipeStart.y;
-
-    if (block.type === "swipeLeft" || block.type === "swipeRight") {
-      x.set(deltaX);
-    } else if (block.type === "swipeUp" || block.type === "swipeDown") {
-      y.set(deltaY);
-    }
-  };
-
-  const handleMouseUp = (e) => {
-    const syntheticEvent = {
-      ...e,
-      touches: [],
-      changedTouches: [{ clientX: e.clientX, clientY: e.clientY }],
-      currentTarget: e.currentTarget,
-      preventDefault: () => {},
-      type: "mouseup",
-    };
-    handleTouchEnd(syntheticEvent);
-  };
-
   return (
     <>
       <AnimatePresence>
@@ -353,13 +342,13 @@ export default function Block({
                 x: {
                   type: "spring",
                   stiffness: 1000,
-                  damping: 35,
+                  damping: 20,
                   duration: 0.2,
                 },
                 y: {
                   type: "spring",
                   stiffness: 1000,
-                  damping: 35,
+                  damping: 20,
                   duration: 0.2,
                 },
                 backgroundColor: { duration: 1.5, ease: "easeInOut" },
@@ -379,7 +368,7 @@ export default function Block({
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
             >
               {block.icon && (
                 <block.icon

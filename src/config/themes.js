@@ -31,17 +31,17 @@ export const scoreThemes = [
   },
   {
     threshold: 3000,
-    background: "#2d1b36", // Deep purple
+    background: "#2a3d45", // Dark teal
     blocks: {
-      swipeLeft: "#c8b6ff", // Lavender
-      swipeRight: "#bbd0ff", // Baby blue
-      swipeUp: "#ffd6ff", // Light pink
-      swipeDown: "#b8c0ff", // Periwinkle
-      tap: "#ffebb3", // Cream
-      doubleTap: "#e7c6ff", // Light purple
+      swipeLeft: "#ff9a8c", // Coral
+      swipeRight: "#88d8b0", // Mint
+      swipeUp: "#7eb2dd", // Steel blue
+      swipeDown: "#b6c199", // Sage
+      tap: "#ffd07b", // Marigold
+      doubleTap: "#e6a4b4", // Dusty rose
       avoid: "#ffffff", // White
-      extraLive: "#ffb3c6", // Soft pink
-      coins: "#b8f7d4", // Mint green
+      extraLive: "#ff8fa3", // Light coral
+      coins: "#a7d7c5", // Seafoam
     },
   },
   {
@@ -67,7 +67,7 @@ export const scoreThemes = [
       swipeRight: "#f67280", // Salmon
       swipeUp: "#c06c84", // Mauve
       swipeDown: "#6c5b7b", // Purple gray
-      tap: "#ffeaa7", // Soft yellow
+      tap: "#f9d56e", // Golden yellow (changed from soft yellow)
       doubleTap: "#f8c4b4", // Light coral
       avoid: "#ffffff", // White
       extraLive: "#ffb5b5", // Light pink

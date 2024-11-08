@@ -450,7 +450,7 @@ export default function GameOver({
         const deltaY = e.clientY - start.y;
         const deltaTime = Date.now() - start.time;
 
-        if (deltaTime < 250) {
+        if (deltaTime < 5000) {
           const absX = Math.abs(deltaX);
           const absY = Math.abs(deltaY);
 
@@ -599,6 +599,8 @@ export default function GameOver({
 
     handleGameOver();
   }, []); // Run only once on mount
+
+  // console.log(coins, "in gameover");
 
   return (
     <div>

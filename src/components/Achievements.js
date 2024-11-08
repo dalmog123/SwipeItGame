@@ -23,7 +23,7 @@ import { soundManager } from "../utils/sound";
 import Information from "./Information";
 
 const Achievements = ({
-  coins = 1250,
+  coins = 0,
   currentAchievements = [],
   onCoinsChange,
   userId,
@@ -221,6 +221,8 @@ const Achievements = ({
 
   // Add validation when displaying coins
   const displayCoins = isNaN(coins) ? 0 : Number(coins);
+  // console.log(coins);
+  // console.log(displayCoins); //6325
 
   const handleMuteToggle = () => {
     const muted = soundManager.toggleMute();
