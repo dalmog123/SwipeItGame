@@ -1,10 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  useTransform,
-} from "framer-motion";
+import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { Heart, CircleDollarSign, Coins } from "lucide-react";
 import { soundManager } from "../utils/sound";
 
@@ -331,6 +326,7 @@ export default function Block({
                   (isFrozen && block.type !== "avoid") || isAnimating
                     ? "none"
                     : "auto",
+                willChange: "transform, opacity",
               }}
               animate={{
                 x,
