@@ -9,8 +9,8 @@ export default function ShareModal({ isOpen, onClose, shareData, userId }) {
 
   const handleShare = async () => {
     try {
-      const baseUrl = "https://dalmog123.github.io/swipeit";
-      const referralUrl = `${baseUrl}/share/${userId}`;
+      const baseUrl = "https://dalmog123.github.io/SwipeItGame";
+      const referralUrl = `${baseUrl}#ref=${userId}`;
 
       const shareDataWithReferral = {
         ...shareData,

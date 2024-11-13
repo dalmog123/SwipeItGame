@@ -1,4 +1,4 @@
-import { db, auth } from "../firebase/firebase";
+import { db } from "../firebase/firebase";
 import {
   doc,
   getDoc,
@@ -204,14 +204,15 @@ export const handleReferral = async (referrerId, newUserId) => {
   }
 };
 
-export const checkAndProcessReferral = async (referrerId) => {
-  if (!referrerId) return;
+export const checkAndProcessReferral = async (currentUserId) => {
+  if (!currentUserId) return;
 
   try {
-    // Get current user ID from your auth system
-    const currentUserId = auth.currentUser?.uid;
+    // Check for referral in hash instead of search params
+    const hash = window.location.hash;
+    const referrerId = hash.match(/#ref=([^&]*)/)?.[1];
 
-    if (referrerId && currentUserId && referrerId !== currentUserId) {
+    if (referrerId && referrerId !== currentUserId) {
       const userDoc = await getDoc(doc(db, "users", currentUserId));
       const isNewUser = !userDoc.exists();
 
