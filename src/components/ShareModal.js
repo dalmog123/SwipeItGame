@@ -9,7 +9,7 @@ export default function ShareModal({ isOpen, onClose, shareData, userId }) {
 
   const handleShare = async () => {
     try {
-      const referralUrl = `${shareData.url}?ref=${userId}`;
+      const referralUrl = `${shareData.url}#ref=${userId}`;
       const shareDataWithReferral = {
         ...shareData,
         url: referralUrl,

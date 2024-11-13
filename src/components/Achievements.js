@@ -537,7 +537,7 @@ const Achievements = ({
                     </button>
 
                     {/* Even more simplified Version Display */}
-                    <div className="mt-4 text-center text-sm text-gray-500">
+                    <div className="mt-4 text-right text-sm text-gray-500">
                       Version {version}
                     </div>
                   </div>
