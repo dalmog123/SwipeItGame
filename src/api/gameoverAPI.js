@@ -208,9 +208,8 @@ export const checkAndProcessReferral = async (currentUserId) => {
   if (!currentUserId) return;
 
   try {
-    // Use hash instead of search params
-    const hash = window.location.hash;
-    const referrerId = hash.match(/#ref=([^&]*)/)?.[1];
+    const urlParams = new URLSearchParams(window.location.search);
+    const referrerId = urlParams.get("ref");
 
     if (referrerId && referrerId !== currentUserId) {
       // Prevent self-referral

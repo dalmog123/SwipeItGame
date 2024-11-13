@@ -9,7 +9,9 @@ export default function ShareModal({ isOpen, onClose, shareData, userId }) {
 
   const handleShare = async () => {
     try {
-      const referralUrl = `${shareData.url}#ref=${userId}`;
+      const baseUrl = "https://dalmog123.github.io/";
+      const referralUrl = `${baseUrl}?ref=${userId}`;
+
       const shareDataWithReferral = {
         ...shareData,
         url: referralUrl,
@@ -18,7 +20,6 @@ export default function ShareModal({ isOpen, onClose, shareData, userId }) {
       if (navigator.share) {
         await navigator.share(shareDataWithReferral);
       } else {
-        // Fallback for browsers that don't support Web Share API
         await navigator.clipboard.writeText(
           `${shareDataWithReferral.text}\n${referralUrl}`
         );
@@ -31,5 +32,5 @@ export default function ShareModal({ isOpen, onClose, shareData, userId }) {
     }
   };
 
-  return null; // Don't render anything
+  return null;
 }
