@@ -534,6 +534,11 @@ const Achievements = ({
                         <Settings className="w-4 h-4" />
                       </div>
                     </button>
+
+                    {/* Even more simplified Version Display */}
+                    <div className="mt-4 text-right text-sm text-gray-500">
+                      Version 1.7.1
+                    </div>
                   </div>
                 </div>
               )}
