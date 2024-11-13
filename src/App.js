@@ -758,7 +758,7 @@ export default function SwipeGame() {
     if (userId) {
       checkAndProcessReferral(userId);
     }
-  }, [userId]); // Run when userId becomes available
+  }, [userId]);
 
   return (
     <motion.div
