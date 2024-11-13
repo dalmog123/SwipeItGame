@@ -1,5 +1,12 @@
 import { db } from "../firebase/firebase";
-import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  increment,
+} from "firebase/firestore";
 
 // Function to get user data from Firebase
 export const getUserData = async (userId) => {
@@ -163,5 +170,46 @@ export const updateCoinsAndAchievements = async (userId, newCoins) => {
     }
   } catch (error) {
     console.error("Error updating coins and achievements:", error);
+  }
+};
+
+// Add these new functions
+export const handleReferral = async (referrerId) => {
+  if (!referrerId) return;
+
+  try {
+    const referrerDoc = doc(db, "users", referrerId);
+    const referrerData = await getDoc(referrerDoc);
+
+    if (referrerData.exists()) {
+      // Award coins to referrer
+      const currentCoins = referrerData.data().coins || 0;
+      const currentTotalCoins = referrerData.data().totalCoinsEarned || 0;
+
+      await updateDoc(referrerDoc, {
+        coins: currentCoins + 200,
+        totalCoinsEarned: currentTotalCoins + 200,
+        referrals: increment(1),
+      });
+    }
+  } catch (error) {
+    console.error("Error handling referral:", error);
+  }
+};
+
+export const checkAndProcessReferral = async () => {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const referrerId = urlParams.get("ref");
+
+    if (referrerId) {
+      // Store referral in session to prevent multiple rewards
+      if (!sessionStorage.getItem("referralProcessed")) {
+        await handleReferral(referrerId);
+        sessionStorage.setItem("referralProcessed", "true");
+      }
+    }
+  } catch (error) {
+    console.error("Error processing referral:", error);
   }
 };

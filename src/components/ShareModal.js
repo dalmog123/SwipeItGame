@@ -9,15 +9,17 @@ import {
   Share2,
 } from "lucide-react";
 
-export default function ShareModal({ isOpen, onClose, shareData }) {
+export default function ShareModal({ isOpen, onClose, shareData, userId }) {
   if (!isOpen) return null;
+
+  const referralUrl = `${shareData.url}?ref=${userId}`;
 
   const shareOptions = [
     {
       name: "Copy Link",
       icon: Link2,
       action: async () => {
-        await navigator.clipboard.writeText(shareData.url);
+        await navigator.clipboard.writeText(referralUrl);
         alert("Link copied!");
         onClose();
       },
@@ -28,7 +30,7 @@ export default function ShareModal({ isOpen, onClose, shareData }) {
       action: () => {
         window.open(
           `https://wa.me/?text=${encodeURIComponent(
-            `${shareData.text}\n${shareData.url}`
+            `${shareData.text}\n${referralUrl}`
           )}`
         );
         onClose();
@@ -41,7 +43,7 @@ export default function ShareModal({ isOpen, onClose, shareData }) {
         window.open(
           `https://twitter.com/intent/tweet?text=${encodeURIComponent(
             shareData.text
-          )}&url=${encodeURIComponent(shareData.url)}`
+          )}&url=${encodeURIComponent(referralUrl)}`
         );
         onClose();
       },
@@ -52,7 +54,7 @@ export default function ShareModal({ isOpen, onClose, shareData }) {
       action: () => {
         window.open(
           `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-            shareData.url
+            referralUrl
           )}`
         );
         onClose();

@@ -1,6 +1,4 @@
-// Importing necessary React features
 import { useState, useEffect, useCallback } from "react";
-// Importing icons from lucide-react
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,12 +12,10 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-// Importing your custom components
 import Header from "./components/Header";
 import GameOver from "./components/GameOver";
 import Block from "./components/Block";
 import "./App.css";
-// Importing shop-related API functions
 import {
   getShopItems,
   consumeExtraLife,
@@ -31,15 +27,13 @@ import {
   getUserData,
   setUserData,
   updateCoinsAndAchievements,
+  checkAndProcessReferral,
 } from "./api/gameoverAPI";
 import { defaultAchievements } from "./config/achievements";
-// Importing sound utility
 import { soundManager } from "./utils/sound";
-// Importing themes
 import { scoreThemes, getThemeForScore } from "./config/themes";
-// Importing framer-motion
 import { motion, AnimatePresence } from "framer-motion";
-// Defining the game actions
+
 const actions = [
   { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
   { type: "swipeRight", icon: ArrowRight, color: "#4ECDC4" },
@@ -52,7 +46,6 @@ const actions = [
   { type: "coins", icon: CircleDollarSign, color: "#22d65e" },
 ];
 
-// Tutorial blocks
 const tutorialBlocks = [
   { type: "tap", icon: Circle, color: "#FFBE0B" },
   { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
@@ -62,7 +55,6 @@ const tutorialBlocks = [
   // { type: "coins", icon: CircleDollarSign, color: "#22d65e" },
 ];
 
-// Update the checkAndConsumeExtraLife function
 const checkAndConsumeExtraLife = async (userId) => {
   try {
     console.log("Checking for extra lives...");
@@ -761,6 +753,10 @@ export default function SwipeGame() {
       document.removeEventListener("click", unlockAudio);
     };
   }, []);
+
+  useEffect(() => {
+    checkAndProcessReferral();
+  }, []); // Run once on app initialization
 
   return (
     <motion.div

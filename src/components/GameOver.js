@@ -798,8 +798,9 @@ export default function GameOver({
         shareData={{
           title: "SwipeIt Game",
           text: `Hey! I just scored ${score} points in SwipeIt. Can you beat my score? 🎮`,
-          url: window.location.href,
+          url: window.location.href.split("?")[0], // Remove any existing query params
         }}
+        userId={userId}
       />
     </>
   );
