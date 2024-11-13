@@ -15,7 +15,7 @@ export const scoreThemes = [
     },
   },
   {
-    threshold: 1000,
+    threshold: 500,
     background: "#1a1d3f", // Deep navy
     blocks: {
       swipeLeft: "#ff7eb9", // Soft pink
@@ -30,7 +30,7 @@ export const scoreThemes = [
     },
   },
   {
-    threshold: 3000,
+    threshold: 1000,
     background: "#2a3d45", // Dark teal
     blocks: {
       swipeLeft: "#ff9a8c", // Coral
@@ -45,7 +45,7 @@ export const scoreThemes = [
     },
   },
   {
-    threshold: 5000,
+    threshold: 2500,
     background: "#2c3639", // Dark slate
     blocks: {
       swipeLeft: "#a5c9ca", // Sage
@@ -60,7 +60,7 @@ export const scoreThemes = [
     },
   },
   {
-    threshold: 10000,
+    threshold: 5000,
     background: "#3f0d12", // Deep burgundy
     blocks: {
       swipeLeft: "#f8b195", // Peach
@@ -72,6 +72,47 @@ export const scoreThemes = [
       avoid: "#ffffff", // White
       extraLive: "#ffb5b5", // Light pink
       coins: "#bee5b0", // Mint
+    },
+  },
+  {
+    threshold: 10000,
+    background: "#0d0d0d", // Very dark gray for contrast
+    blocks: {
+      swipeLeft: "transparent",
+      swipeRight: "transparent",
+      swipeUp: "transparent",
+      swipeDown: "transparent",
+      tap: "transparent",
+      doubleTap: "transparent",
+      avoid: "transparent",
+      extraLive: "transparent",
+      coins: "transparent",
+    },
+    originalColors: {
+      swipeLeft: "#FF6B6B",
+      swipeRight: "#4ECDC4",
+      swipeUp: "#45B7D1",
+      swipeDown: "#96CEB4",
+      tap: "#FFBE0B",
+      doubleTap: "#FF006E",
+      avoid: "#000000",
+      extraLive: "#ff0000",
+      coins: "#22d65e",
+    },
+  },
+  {
+    threshold: 15000,
+    background: "#0d0d0d", // Very dark gray for contrast
+    blocks: {
+      swipeLeft: "transparent",
+      swipeRight: "transparent",
+      swipeUp: "transparent",
+      swipeDown: "transparent",
+      tap: "transparent",
+      doubleTap: "transparent",
+      avoid: "transparent",
+      extraLive: "transparent",
+      coins: "transparent",
     },
   },
 ];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { Heart, CircleDollarSign, Coins } from "lucide-react";
 import { soundManager } from "../utils/sound";
@@ -25,6 +25,21 @@ export default function Block({
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+
+  const previousThemeRef = useRef(currentTheme);
+  const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
+
+  useEffect(() => {
+    if (previousThemeRef.current?.threshold !== currentTheme.threshold) {
+      setIsThemeTransitioning(true);
+      const timer = setTimeout(() => {
+        setIsThemeTransitioning(false);
+      }, 300);
+
+      previousThemeRef.current = currentTheme;
+      return () => clearTimeout(timer);
+    }
+  }, [currentTheme]);
 
   const getSwipeAnimation = useCallback((type) => {
     switch (type) {
@@ -119,9 +134,7 @@ export default function Block({
           setIsHandled(false);
         }, 1500);
       } else if (block.type === "avoid") {
-        soundManager.play("avoidtap", {
-          volume: 0.6,
-        });
+        soundManager.play("avoidtap", { volume: 0.6 });
 
         setTimeout(() => {
           soundManager.setMuffled(true, {
@@ -301,6 +314,48 @@ export default function Block({
     );
   };
 
+  // Determine the neon color based on the original colors
+  const neonColor = currentTheme.originalColors
+    ? currentTheme.originalColors[block.type]
+    : block.color;
+
+  const animateProps = {
+    x,
+    y,
+    backgroundColor: block.color || "#000000",
+    transition: {
+      x: {
+        type: "spring",
+        stiffness: isThemeTransitioning ? 2000 : 1000,
+        damping: 20,
+        duration: 0.2,
+      },
+      y: {
+        type: "spring",
+        stiffness: isThemeTransitioning ? 2000 : 1000,
+        damping: 20,
+        duration: 0.2,
+      },
+      backgroundColor: {
+        duration: isThemeTransitioning ? 0.3 : 1.5,
+        ease: "easeInOut",
+      },
+    },
+  };
+
+  const blockStyle = {
+    width: "90vw",
+    maxWidth: "550px",
+    height: "8.5vh",
+    backgroundColor: block.color || "#000000",
+    opacity: isFrozen && block.type !== "avoid" ? 0.5 : 1,
+    pointerEvents:
+      (isFrozen && block.type !== "avoid") || isAnimating ? "none" : "auto",
+    willChange: "transform, opacity, background-color",
+    color: neonColor,
+    transition: isThemeTransitioning ? "background-color 0.3s ease" : "none",
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -315,46 +370,17 @@ export default function Block({
             <motion.div
               className={`rounded-lg shadow-lg flex items-center justify-center ${
                 shouldShake && !isInteracting ? "animate-shake" : ""
-              }`}
-              style={{
-                width: "90vw",
-                maxWidth: "550px",
-                height: "8.5vh",
-                backgroundColor: block.color || "#000000",
-                opacity: isFrozen && block.type !== "avoid" ? 0.5 : 1,
-                pointerEvents:
-                  (isFrozen && block.type !== "avoid") || isAnimating
-                    ? "none"
-                    : "auto",
-                willChange: "transform, opacity",
-              }}
-              animate={{
-                x,
-                y,
-                backgroundColor: block.color || "#000000",
-              }}
+              } ${currentTheme.threshold === 10000 ? "neon-border" : ""}`}
+              style={blockStyle}
+              animate={animateProps}
               initial={false}
-              transition={{
-                x: {
-                  type: "spring",
-                  stiffness: 1000,
-                  damping: 20,
-                  duration: 0.2,
-                },
-                y: {
-                  type: "spring",
-                  stiffness: 1000,
-                  damping: 20,
-                  duration: 0.2,
-                },
-                backgroundColor: { duration: 1.5, ease: "easeInOut" },
-              }}
               drag={
-                ["swipeLeft", "swipeRight"].includes(block.type)
+                !isThemeTransitioning &&
+                (["swipeLeft", "swipeRight"].includes(block.type)
                   ? "x"
                   : ["swipeUp", "swipeDown"].includes(block.type)
                   ? "y"
-                  : false
+                  : false)
               }
               dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
               dragElastic={0.1}

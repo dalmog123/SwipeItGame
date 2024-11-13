@@ -17,7 +17,7 @@ const FloatingBalloon = ({ icon, delay, index, onPop, id }) => {
       }}
       style={{
         left: `${29 * index}%`,
-        filter: "blur(1px)",
+        filter: "blur(0px)",
       }}
       onClick={onPop}
     >

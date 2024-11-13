@@ -305,7 +305,7 @@ export default function SwipeGame() {
         };
         setGameState((prev) => ({ ...prev, blocks: [tutorialBlock] }));
       } else {
-        const targetBlockCount = Math.min(9, 1 + Math.floor(score / 50));
+        const targetBlockCount = Math.min(9, 1 + Math.floor(score / 75));
         const newBlocks = Array(targetBlockCount)
           .fill(null)
           .map(() => getRandomBlock());

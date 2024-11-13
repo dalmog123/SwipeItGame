@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { BsFillBalloonHeartFill } from "react-icons/bs";
-import { Trophy, ChevronRight, Coins } from "lucide-react";
+import { Trophy, ChevronRight, Coins, Share2 } from "lucide-react";
 import ScoreBoard from "./ScoreBoard";
 import Achievement from "./Achievements";
 import FloatingBalloon from "./FloatingBalloons";
@@ -15,6 +15,7 @@ import {
   setUserData,
 } from "../api/gameoverAPI";
 import { defaultAchievements } from "../config/achievements";
+import ShareModal from "./ShareModal";
 
 export default function GameOver({
   score,
@@ -60,6 +61,7 @@ export default function GameOver({
   const [currentAchievement, setCurrentAchievement] = useState(null);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [coinAnimations, setCoinAnimations] = useState([]);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   useEffect(() => {
     setFloatingElements([
@@ -602,150 +604,203 @@ export default function GameOver({
 
   // console.log(coins, "in gameover");
 
+  const handleShare = async () => {
+    const shareData = {
+      title: "SwipeIt Game",
+      text: `Hey! I just scored ${score} points in SwipeIt. Can you beat my score? 🎮`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback for browsers that don't support Web Share API
+        navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        // You might want to show a toast or notification here
+        alert("Link copied to clipboard!");
+      }
+    } catch (error) {
+      console.error("Error sharing:", error);
+    }
+  };
+
   return (
-    <div>
-      {!scoreBoard ? (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-400 via-teal-300 to-green-500 p-4 sm:p-8 overflow-hidden">
-          <Achievement
-            currentAchievements={achievements}
-            coins={coins}
-            onCoinsChange={handleCoinsChange}
-            userId={userId}
-            isMuted={isMuted}
-            setIsMuted={setIsMuted}
-          />
-          {currentAchievement && (
-            <AchievementsNotification
-              show={true}
-              onHide={() => setCurrentAchievement(null)}
-              achievement={currentAchievement.achievement}
-              level={currentAchievement.level}
-              coins={currentAchievement.coins}
-            />
-          )}
-          <div className="relative bg-gradient-to-br from-blue-300 via-teal-200 to-green-300 rounded-3xl shadow-2xl p-4 sm:p-8 mb-8 sm:mb-12 max-w-xs sm:max-w-md w-full text-center">
-            <motion.h1
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 10 }}
-              className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-pink-600 mb-4 sm:mb-8"
-            >
-              Game Over!
-            </motion.h1>
-
-            <AnimatePresence>
-              {showScore && (
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  exit={{ scale: 0, rotate: 180 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                  className="mb-6 flex items-center justify-center"
-                >
-                  <div className="flex flex-col items-center mr-4">
-                    <div className="text-6xl font-bold text-yellow-400 drop-shadow-glow animate-pulse">
-                      {score !== undefined ? score : 0}
-                    </div>
-                    <div className="text-md text-white mt-1">Points</div>
-                  </div>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="p-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full shadow-lg hover:shadow-xl transition duration-300 ease-in-out flex items-center justify-center"
-                    onClick={handleScoreBoard}
-                    aria-label="Go to Scoreboard"
-                  >
-                    <Trophy className="mr-1" size={24} />
-                    <ChevronRight size={24} />
-                  </motion.button>
-                </motion.div>
+    <>
+      <div>
+        {!scoreBoard ? (
+          <>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-400 via-teal-300 to-green-500 p-4 sm:p-8 overflow-hidden">
+              <Achievement
+                currentAchievements={achievements}
+                coins={coins}
+                onCoinsChange={handleCoinsChange}
+                userId={userId}
+                isMuted={isMuted}
+                setIsMuted={setIsMuted}
+              />
+              {currentAchievement && (
+                <AchievementsNotification
+                  show={true}
+                  onHide={() => setCurrentAchievement(null)}
+                  achievement={currentAchievement.achievement}
+                  level={currentAchievement.level}
+                  coins={currentAchievement.coins}
+                />
               )}
-            </AnimatePresence>
+              <div className="relative bg-gradient-to-br from-blue-300 via-teal-200 to-green-300 rounded-3xl shadow-2xl p-4 sm:p-8 mb-8 sm:mb-12 max-w-xs sm:max-w-md w-full text-center">
+                <motion.h1
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                  className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-pink-600 mb-4 sm:mb-8"
+                >
+                  Game Over!
+                </motion.h1>
 
-            <motion.button
-              onTouchStart={(e) => handleSwipe(e.touches[0], "start")}
-              onTouchEnd={(e) => handleSwipe(e.changedTouches[0], "end")}
-              onMouseDown={(e) => handleSwipe(e, "start")}
-              onMouseUp={(e) => handleSwipe(e, "end")}
-              onMouseLeave={(e) => handleSwipe(e, "end")}
-              animate={
-                swipeDirection
-                  ? {
-                      x:
-                        swipeDirection === "left"
-                          ? "-100vw"
-                          : swipeDirection === "right"
-                          ? "100vw"
-                          : 0,
-                      y:
-                        swipeDirection === "up"
-                          ? "-100vh"
-                          : swipeDirection === "down"
-                          ? "100vh"
-                          : 0,
-                      opacity: swipeDirection ? 0 : 1,
-                    }
-                  : { scale: [1, 1.2, 1] }
-              }
-              transition={
-                swipeDirection
-                  ? { duration: 0.5 }
-                  : { repeat: Infinity, duration: 2 }
-              }
-              className="px-6 py-2 sm:px-8 sm:py-3 bg-gradient-to-r from-green-500 to-blue-700 text-white rounded-full text-lg sm:text-4xl font-bold shadow-lg hover:shadow-xl transition duration-300 ease-in-out mb-4 sm:mb-8"
-              style={{
-                marginBottom: "env(safe-area-inset-bottom)",
-                width: "80%",
-                cursor: "grab",
-                alignSelf: "center",
-              }}
-              onClick={() => resetGame()}
-            >
-              Swipe Again!
-            </motion.button>
+                <AnimatePresence>
+                  {showScore && (
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      exit={{ scale: 0, rotate: 180 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 260,
+                        damping: 20,
+                      }}
+                      className="mb-6 flex items-center justify-center"
+                    >
+                      <div className="flex flex-col items-center mr-4">
+                        <div className="text-6xl font-bold text-yellow-400 drop-shadow-glow animate-pulse">
+                          {score !== undefined ? score : 0}
+                        </div>
+                        <div className="text-md text-white mt-1">Points</div>
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="p-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full shadow-lg hover:shadow-xl transition duration-300 ease-in-out flex items-center justify-center"
+                        onClick={handleScoreBoard}
+                        aria-label="Go to Scoreboard"
+                      >
+                        <Trophy className="mr-1" size={24} />
+                        <ChevronRight size={24} />
+                      </motion.button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-            {/* Coin Animations */}
-            {coinAnimations.map((anim) => (
-              <div
-                key={anim.id}
-                className="fixed pointer-events-none"
-                style={{
-                  left: anim.x,
-                  top: anim.y,
-                  transform: "translate(-50%, -50%)",
-                  animation: "coinFloat 1s ease-out forwards",
-                }}
-              >
-                <div className="flex items-center text-purple-700 font-bold">
-                  +5 <Coins className="w-4 h-4 ml-1" />
-                </div>
+                <motion.button
+                  onTouchStart={(e) => handleSwipe(e.touches[0], "start")}
+                  onTouchEnd={(e) => handleSwipe(e.changedTouches[0], "end")}
+                  onMouseDown={(e) => handleSwipe(e, "start")}
+                  onMouseUp={(e) => handleSwipe(e, "end")}
+                  onMouseLeave={(e) => handleSwipe(e, "end")}
+                  animate={
+                    swipeDirection
+                      ? {
+                          x:
+                            swipeDirection === "left"
+                              ? "-100vw"
+                              : swipeDirection === "right"
+                              ? "100vw"
+                              : 0,
+                          y:
+                            swipeDirection === "up"
+                              ? "-100vh"
+                              : swipeDirection === "down"
+                              ? "100vh"
+                              : 0,
+                          opacity: swipeDirection ? 0 : 1,
+                        }
+                      : { scale: [1, 1.2, 1] }
+                  }
+                  transition={
+                    swipeDirection
+                      ? { duration: 0.5 }
+                      : { repeat: Infinity, duration: 2 }
+                  }
+                  className="px-6 py-2 sm:px-8 sm:py-3 bg-gradient-to-r from-green-500 to-blue-700 text-white rounded-full text-lg sm:text-4xl font-bold shadow-lg hover:shadow-xl transition duration-300 ease-in-out mb-4 sm:mb-8"
+                  style={{
+                    marginBottom: "env(safe-area-inset-bottom)",
+                    width: "80%",
+                    cursor: "grab",
+                    alignSelf: "center",
+                  }}
+                  onClick={() => resetGame()}
+                >
+                  Swipe Again!
+                </motion.button>
+
+                {/* Coin Animations */}
+                {coinAnimations.map((anim) => (
+                  <div
+                    key={anim.id}
+                    className="fixed pointer-events-none"
+                    style={{
+                      left: anim.x,
+                      top: anim.y,
+                      transform: "translate(-50%, -50%)",
+                      animation: "coinFloat 1s ease-out forwards",
+                    }}
+                  >
+                    <div className="flex items-center text-purple-700 font-bold">
+                      +5 <Coins className="w-4 h-4 ml-1" />
+                    </div>
+                  </div>
+                ))}
+
+                {/* Floating Balloons */}
+                {floatingElements.map(
+                  (el, index) =>
+                    !el.popped && (
+                      <FloatingBalloon
+                        key={index}
+                        icon={el.icon}
+                        delay={el.delay}
+                        index={index}
+                        onPop={() => handlePopBalloon(index)}
+                        id={`balloon-${index}`}
+                      />
+                    )
+                )}
               </div>
-            ))}
+            </div>
 
-            {/* Floating Balloons */}
-            {floatingElements.map(
-              (el, index) =>
-                !el.popped && (
-                  <FloatingBalloon
-                    key={index}
-                    icon={el.icon}
-                    delay={el.delay}
-                    index={index}
-                    onPop={() => handlePopBalloon(index)}
-                    id={`balloon-${index}`}
-                  />
-                )
-            )}
+            {/* Share button - Only shown when scoreBoard is false */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleShare}
+              className="fixed bottom-6 right-6 p-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl transition duration-300 ease-in-out flex items-center justify-center gap-2 z-50"
+              aria-label="Share with friends"
+            >
+              <Share2 size={24} />
+              <span className="inline text-sm sm:text-base">
+                Invite Friends
+              </span>
+            </motion.button>
+          </>
+        ) : (
+          <div>
+            <ScoreBoard
+              onBack={handleBackButton}
+              currentUserId={userId}
+            ></ScoreBoard>
           </div>
-        </div>
-      ) : (
-        <div>
-          <ScoreBoard
-            onBack={handleBackButton}
-            currentUserId={userId}
-          ></ScoreBoard>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        shareData={{
+          title: "SwipeIt Game",
+          text: `Hey! I just scored ${score} points in SwipeIt. Can you beat my score? 🎮`,
+          url: window.location.href,
+        }}
+      />
+    </>
   );
 }
