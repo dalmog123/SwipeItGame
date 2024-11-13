@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SwipeIt Game</title>
+    <script>
+      // Get the URL path
+      var pathSegments = window.location.pathname.split("/");
+      var redirectUrl = window.location.origin;
+
+      // Get all URL parameters
+      var searchParams = window.location.search;
+      var hashFragment = window.location.hash;
+
+      // Redirect to the main page with the parameters
+      window.location.replace(redirectUrl + searchParams + hashFragment);
+    </script>
+  </head>
+  <body>
+    Redirecting...
+  </body>
+</html>
