@@ -174,39 +174,51 @@ export const updateCoinsAndAchievements = async (userId, newCoins) => {
 };
 
 // Add these new functions
-export const handleReferral = async (referrerId) => {
-  if (!referrerId) return;
+export const handleReferral = async (referrerId, newUserId) => {
+  if (!referrerId || !newUserId) return;
 
   try {
     const referrerDoc = doc(db, "users", referrerId);
     const referrerData = await getDoc(referrerDoc);
 
     if (referrerData.exists()) {
-      // Award coins to referrer
-      const currentCoins = referrerData.data().coins || 0;
-      const currentTotalCoins = referrerData.data().totalCoinsEarned || 0;
+      // Get or initialize the referredUsers array
+      const referredUsers = referrerData.data().referredUsers || [];
 
-      await updateDoc(referrerDoc, {
-        coins: currentCoins + 200,
-        totalCoinsEarned: currentTotalCoins + 200,
-        referrals: increment(1),
-      });
+      // Check if this user has already been referred
+      if (!referredUsers.includes(newUserId)) {
+        // Award coins to referrer
+        const currentCoins = referrerData.data().coins || 0;
+        const currentTotalCoins = referrerData.data().totalCoinsEarned || 0;
+
+        await updateDoc(referrerDoc, {
+          coins: currentCoins + 200,
+          totalCoinsEarned: currentTotalCoins + 200,
+          referrals: increment(1),
+          referredUsers: [...referredUsers, newUserId], // Add new user to the list
+        });
+      }
     }
   } catch (error) {
     console.error("Error handling referral:", error);
   }
 };
 
-export const checkAndProcessReferral = async () => {
+export const checkAndProcessReferral = async (currentUserId) => {
+  if (!currentUserId) return; // Need current user's ID to check if they're new
+
   try {
     const urlParams = new URLSearchParams(window.location.search);
     const referrerId = urlParams.get("ref");
 
-    if (referrerId) {
-      // Store referral in session to prevent multiple rewards
-      if (!sessionStorage.getItem("referralProcessed")) {
-        await handleReferral(referrerId);
-        sessionStorage.setItem("referralProcessed", "true");
+    if (referrerId && referrerId !== currentUserId) {
+      // Prevent self-referral
+      // Check if this is a new user
+      const userDoc = await getDoc(doc(db, "users", currentUserId));
+      const isNewUser = !userDoc.exists();
+
+      if (isNewUser) {
+        await handleReferral(referrerId, currentUserId);
       }
     }
   } catch (error) {

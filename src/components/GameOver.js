@@ -604,27 +604,6 @@ export default function GameOver({
 
   // console.log(coins, "in gameover");
 
-  const handleShare = async () => {
-    const shareData = {
-      title: "SwipeIt Game",
-      text: `Hey! I just scored ${score} points in SwipeIt. Can you beat my score? 🎮`,
-      url: window.location.href,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        // Fallback for browsers that don't support Web Share API
-        navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-        // You might want to show a toast or notification here
-        alert("Link copied to clipboard!");
-      }
-    } catch (error) {
-      console.error("Error sharing:", error);
-    }
-  };
-
   return (
     <>
       <div>
@@ -772,7 +751,7 @@ export default function GameOver({
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleShare}
+              onClick={() => setIsShareModalOpen(true)}
               className="fixed bottom-6 right-6 p-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl transition duration-300 ease-in-out flex items-center justify-center gap-2 z-50"
               aria-label="Share with friends"
             >

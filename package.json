@@ -25,7 +25,10 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "update-version": "node scripts/updateVersion.js",
+    "update-version:minor": "node scripts/updateVersion.js minor",
+    "update-version:major": "node scripts/updateVersion.js major"
   },
   "eslintConfig": {
     "extends": [

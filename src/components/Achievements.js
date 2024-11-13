@@ -21,6 +21,7 @@ import { getUserData, listenToUserData } from "../api/gameoverAPI";
 import { defaultAchievements } from "../config/achievements";
 import { soundManager } from "../utils/sound";
 import Information from "./Information";
+import { version } from "../config/version.js";
 
 const Achievements = ({
   coins = 0,
@@ -536,8 +537,8 @@ const Achievements = ({
                     </button>
 
                     {/* Even more simplified Version Display */}
-                    <div className="mt-4 text-right text-sm text-gray-500">
-                      Version 1.7.1
+                    <div className="mt-4 text-center text-sm text-gray-500">
+                      Version {version}
                     </div>
                   </div>
                 </div>

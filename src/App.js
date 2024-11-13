@@ -755,8 +755,10 @@ export default function SwipeGame() {
   }, []);
 
   useEffect(() => {
-    checkAndProcessReferral();
-  }, []); // Run once on app initialization
+    if (userId) {
+      checkAndProcessReferral(userId);
+    }
+  }, [userId]); // Run when userId becomes available
 
   return (
     <motion.div
