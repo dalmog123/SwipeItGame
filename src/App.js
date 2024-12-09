@@ -80,7 +80,7 @@ export default function SwipeGame() {
   const [gameState, setGameState] = useState({
     blocks: [],
     score: 0,
-    timer: 0,
+    pageTimer: 6,
     isGameOver: false,
     isInTutorial: true,
     tutorialIndex: 0,
@@ -172,7 +172,7 @@ export default function SwipeGame() {
     setGameState({
       blocks: [],
       score: 0,
-      timer: 0,
+      pageTimer: 6,
       isGameOver: false,
       isInTutorial: false,
       tutorialIndex: 0,
@@ -295,13 +295,21 @@ export default function SwipeGame() {
           id: `tutorial-${tutorialIndex}`,
           createdAt: Date.now(),
         };
-        setGameState((prev) => ({ ...prev, blocks: [tutorialBlock] }));
+        setGameState((prev) => ({
+          ...prev,
+          blocks: [tutorialBlock],
+          pageTimer: 6, // Reset timer when spawning new blocks
+        }));
       } else {
         const targetBlockCount = Math.min(9, 1 + Math.floor(score / 75));
         const newBlocks = Array(targetBlockCount)
           .fill(null)
           .map(() => getRandomBlock());
-        setGameState((prev) => ({ ...prev, blocks: newBlocks }));
+        setGameState((prev) => ({
+          ...prev,
+          blocks: newBlocks,
+          pageTimer: 6, // Reset timer when spawning new blocks
+        }));
       }
     }
   }, [gameState, getRandomBlock]);
@@ -311,108 +319,112 @@ export default function SwipeGame() {
     spawnBlocks();
   }, [spawnBlocks, gameState?.blocks?.length]);
 
-  // Update the timer effect to properly handle the extra life check
+  // Update the timer effect
   useEffect(() => {
     if (gameState.isGameOver || gameState.isInTutorial || gameState.isFrozen)
       return;
 
-    let isProcessingExtraLife = false;
-
     const interval = setInterval(async () => {
-      if (isProcessingExtraLife) return;
+      setGameState((prev) => {
+        // If no blocks, reset timer to 6
+        if (!prev.blocks || prev.blocks.length === 0) {
+          return {
+            ...prev,
+            pageTimer: 6,
+          };
+        }
 
-      const currentBlocks = Array.isArray(gameState.blocks)
-        ? gameState.blocks
-        : [];
-      const timeLimit = gameState.score >= 500 ? 5 : 5.5;
+        const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
+        const SPECIAL_BLOCK_LIFETIME = 2.5;
 
-      const timedOutBlock = currentBlocks.find(
-        (block) =>
-          !["avoid", "extraLive", "coins"].includes(block.type) &&
-          (Date.now() - block.createdAt) / 1000 >= timeLimit
-      );
+        // Check for special blocks that need to be removed
+        const updatedBlocks = currentBlocks.filter((block) => {
+          const blockAge = (Date.now() - block.createdAt) / 1000;
 
-      if (timedOutBlock) {
-        try {
-          isProcessingExtraLife = true;
-          console.log("Block timed out, checking for extra life...");
-          const hasExtraLife = await checkAndConsumeExtraLife(userId);
-          console.log("Extra life check result:", hasExtraLife);
-
-          setGameState((prev) => {
-            if (hasExtraLife) {
-              console.log("Extra life used, continuing game");
-              return {
-                ...prev,
-                blocks: prev.blocks.filter((b) => b.id !== timedOutBlock.id),
-              };
-            } else {
-              console.log("No extra life available, game over");
-              return {
-                ...prev,
-                isGameOver: true,
-                blocks: [],
-                transitioning: false,
-              };
+          if (
+            (block.type === "avoid" ||
+              block.type === "extraLive" ||
+              block.type === "coins") &&
+            blockAge >= SPECIAL_BLOCK_LIFETIME
+          ) {
+            if (block.type === "avoid") {
+              prev.score += prev.doubleScoreActive ? 20 : 10;
             }
-          });
+            return false;
+          }
+          return true;
+        });
 
-          setTimeout(() => {
-            isProcessingExtraLife = false;
-          }, 200);
+        // Decrease timer
+        const newTimer = Math.max(0, prev.pageTimer - 0.1);
 
-          if (hasExtraLife) return;
-        } catch (error) {
-          console.error("Error handling extra life:", error);
-          setGameState((prev) => ({
+        // If timer reaches 0, handle extra lives
+        if (newTimer === 0) {
+          const remainingRegularBlocks = updatedBlocks.filter(
+            (block) => !["avoid", "extraLive", "coins"].includes(block.type)
+          ).length;
+
+          // If no regular blocks remain, just reset timer
+          if (remainingRegularBlocks === 0) {
+            return {
+              ...prev,
+              blocks: updatedBlocks,
+              pageTimer: 6,
+            };
+          }
+
+          // If there are remaining blocks but user has enough extra lives
+          if (extraLives >= remainingRegularBlocks) {
+            // Consume the required number of extra lives
+            consumeMultipleExtraLives(userId, remainingRegularBlocks);
+
+            return {
+              ...prev,
+              blocks: [], // Clear all blocks
+              pageTimer: 6, // Reset timer
+              transitioning: false,
+            };
+          }
+
+          // If not enough extra lives, game over
+          return {
             ...prev,
             isGameOver: true,
             blocks: [],
             transitioning: false,
-          }));
-          isProcessingExtraLife = false;
-          return;
+          };
         }
-      }
-
-      // Only update other blocks if we haven't handled a timed out block
-      setGameState((prev) => {
-        if (prev.isGameOver) return prev;
-
-        const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
-        const timeLimit = prev.score >= 500 ? 5 : 5.5;
-
-        // Separate time limits for different block types
-        const updatedBlocks = currentBlocks.filter((block) => {
-          const blockAge = (Date.now() - block.createdAt) / 1000;
-
-          if (block.type === "avoid") {
-            return blockAge < timeLimit - 2.5; // Avoid blocks disappear earlier
-          } else if (block.type === "extraLive" || block.type === "coins") {
-            return blockAge < timeLimit - 2.5; // Special blocks stay less
-          }
-          return blockAge < timeLimit; // Normal blocks use standard time
-        });
 
         return {
           ...prev,
-          timer: prev.timer + 0.1,
           blocks: updatedBlocks,
+          pageTimer: newTimer,
+          score: prev.score,
         };
       });
     }, 100);
 
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [
     gameState.isGameOver,
     gameState.isInTutorial,
     gameState.isFrozen,
+    extraLives,
     userId,
-    gameState.score,
-    gameState.blocks,
   ]);
+
+  // Add this helper function to consume multiple extra lives
+  const consumeMultipleExtraLives = async (userId, count) => {
+    try {
+      for (let i = 0; i < count; i++) {
+        await consumeExtraLife(userId);
+      }
+      return true;
+    } catch (error) {
+      console.error("Error consuming multiple extra lives:", error);
+      return false;
+    }
+  };
 
   const handleBlockSuccess = useCallback(
     (blockId, blockType) => {
@@ -760,6 +772,26 @@ export default function SwipeGame() {
     }
   }, [userId]);
 
+  // Add these near your other state declarations
+  const [pendingInteractions, setPendingInteractions] = useState([]);
+  const [isProcessingInteraction, setIsProcessingInteraction] = useState(false);
+
+  const queueInteraction = useCallback((e, type, block) => {
+    setPendingInteractions((prev) => [...prev, { e, type, block }]);
+  }, []);
+
+  useEffect(() => {
+    if (pendingInteractions.length > 0 && !isProcessingInteraction) {
+      setIsProcessingInteraction(true);
+      const { e, type, block } = pendingInteractions[0];
+
+      handleInteraction(e, type, block).finally(() => {
+        setIsProcessingInteraction(false);
+        setPendingInteractions((prev) => prev.slice(1));
+      });
+    }
+  }, [pendingInteractions, isProcessingInteraction, handleInteraction]);
+
   return (
     <motion.div
       className="flex flex-col min-h-screen touch-none select-none"
@@ -772,7 +804,7 @@ export default function SwipeGame() {
         <div className="flex">
           <Header
             score={gameState.score}
-            timer={gameState.timer}
+            pageTimer={gameState.pageTimer}
             isInTutorial={gameState.isInTutorial}
             extraLives={extraLives}
             doubleScoreActive={doubleScoreActive}
@@ -819,7 +851,7 @@ export default function SwipeGame() {
                     ...block,
                     color: currentTheme.blocks[block.type],
                   }}
-                  handleInteraction={handleInteraction}
+                  handleInteraction={queueInteraction}
                   isInTutorial={gameState.isInTutorial}
                   isTransitioning={gameState.transitioning}
                   isFrozen={gameState.isFrozen && block.type !== "avoid"}

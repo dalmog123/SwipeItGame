@@ -6,7 +6,7 @@ import { FaHeart } from "react-icons/fa";
 
 export default function Header({
   score,
-  timer,
+  pageTimer,
   isInTutorial,
   extraLives,
   doubleScoreActive,
@@ -54,7 +54,7 @@ export default function Header({
             >
               <Clock className="text-green-300" size={24} />
               <span className="text-xl font-bold text-white">
-                {(timer || 0).toFixed(1)}s
+                {pageTimer.toFixed(1)}
               </span>
             </motion.div>
           </>

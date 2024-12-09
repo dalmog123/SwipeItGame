@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { Heart, CircleDollarSign, Coins } from "lucide-react";
 import { soundManager } from "../utils/sound";
+import { flushSync } from "react-dom";
 
 export default function Block({
   block,
@@ -92,13 +93,23 @@ export default function Block({
 
   const handleBlockInteraction = useCallback(
     (e, interactionType) => {
+      console.log("Interaction Attempted:", interactionType, block.type);
+      console.log("Current States:", {
+        isTransitioning,
+        isFrozen,
+        isHandled,
+        isAnimating,
+      });
+
       if (
         isTransitioning ||
         (isFrozen && block.type !== "avoid") ||
         isHandled ||
         isAnimating
-      )
+      ) {
+        console.log("Interaction blocked due to state.");
         return;
+      }
 
       setIsTapped(false);
       setSwipeStart(null);
@@ -354,6 +365,8 @@ export default function Block({
     willChange: "transform, opacity, background-color",
     color: neonColor,
     transition: isThemeTransitioning ? "background-color 0.3s ease" : "none",
+    transform: "translateZ(0)",
+    backfaceVisibility: "hidden",
   };
 
   return (
@@ -404,6 +417,9 @@ export default function Block({
                   }
                 />
               )}
+              <div className="absolute top-2 right-2 text-sm font-bold">
+                {Math.ceil(block.remainingTime || 0)}
+              </div>
             </motion.div>
           </motion.div>
         )}
