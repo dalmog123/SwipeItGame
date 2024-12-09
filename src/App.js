@@ -75,6 +75,16 @@ const checkAndConsumeExtraLife = async (userId) => {
   }
 };
 
+// Add this helper function for rounding to nearest 5
+const roundToNearest5 = (num) => {
+  // Make sure we're working with the absolute value
+  const absNum = Math.abs(num);
+  // Round to nearest 5
+  const rounded = Math.round(absNum / 5) * 5;
+  // Return with original sign
+  return num < 0 ? -rounded : rounded;
+};
+
 export default function SwipeGame() {
   const [userId, setUserId] = useState(null);
   const [gameState, setGameState] = useState({
@@ -286,10 +296,19 @@ export default function SwipeGame() {
       transitioning,
     } = gameState;
 
-    if (isGameOver || transitioning) return;
+    if (isGameOver) return;
+
+    // console.log("SpawnBlocks called with state:", {
+    //   isInTutorial,
+    //   tutorialIndex,
+    //   blocksLength: blocks.length,
+    //   transitioning,
+    //   score,
+    // });
 
     if (!blocks || blocks.length === 0) {
       if (isInTutorial) {
+        // console.log("Spawning tutorial block:", tutorialIndex);
         const tutorialBlock = {
           ...tutorialBlocks[tutorialIndex],
           id: `tutorial-${tutorialIndex}`,
@@ -298,35 +317,76 @@ export default function SwipeGame() {
         setGameState((prev) => ({
           ...prev,
           blocks: [tutorialBlock],
-          pageTimer: 6, // Reset timer when spawning new blocks
+          pageTimer: 6,
+          transitioning: false,
         }));
       } else {
+        // Regular game mode - always spawn if no blocks
         const targetBlockCount = Math.min(9, 1 + Math.floor(score / 75));
+        // console.log("Attempting to spawn regular blocks:", {
+        //   targetBlockCount,
+        //   score,
+        //   transitioning,
+        // });
+
         const newBlocks = Array(targetBlockCount)
           .fill(null)
           .map(() => getRandomBlock());
-        setGameState((prev) => ({
-          ...prev,
-          blocks: newBlocks,
-          pageTimer: 6, // Reset timer when spawning new blocks
-        }));
+
+        // console.log("Created new blocks:", newBlocks.length);
+
+        setGameState((prev) => {
+          // console.log("Setting new game state with blocks:", {
+          //   currentScore: prev.score,
+          //   newBlockCount: newBlocks.length,
+          // });
+          return {
+            ...prev,
+            blocks: newBlocks,
+            pageTimer: 6,
+            transitioning: false,
+          };
+        });
       }
+    } else {
+      // console.log("Blocks exist, not spawning:", blocks.length);
     }
   }, [gameState, getRandomBlock]);
 
   useEffect(() => {
-    if (!gameState?.blocks) return;
-    spawnBlocks();
-  }, [spawnBlocks, gameState?.blocks?.length]);
+    if (!gameState) return;
 
-  // Update the timer effect
+    // console.log("Block watch effect triggered:", {
+    //   blocksLength: gameState.blocks?.length || 0,
+    //   isInTutorial: gameState.isInTutorial,
+    //   tutorialIndex: gameState.tutorialIndex,
+    //   transitioning: gameState.transitioning,
+    //   score: gameState.score,
+    // });
+
+    // Remove the timeout to make spawning more immediate
+    spawnBlocks();
+  }, [
+    spawnBlocks,
+    gameState?.blocks?.length,
+    gameState?.isInTutorial,
+    gameState?.transitioning,
+  ]); // Added transitioning to dependencies
+
+  // Update the timer effect to properly handle avoid blocks
   useEffect(() => {
     if (gameState.isGameOver || gameState.isInTutorial || gameState.isFrozen)
       return;
 
-    const interval = setInterval(async () => {
+    console.log("Timer effect running, gameState:", {
+      isGameOver: gameState.isGameOver,
+      isInTutorial: gameState.isInTutorial,
+      isFrozen: gameState.isFrozen,
+      pageTimer: gameState.pageTimer,
+    });
+
+    const interval = setInterval(() => {
       setGameState((prev) => {
-        // If no blocks, reset timer to 6
         if (!prev.blocks || prev.blocks.length === 0) {
           return {
             ...prev,
@@ -337,47 +397,41 @@ export default function SwipeGame() {
         const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
         const SPECIAL_BLOCK_LIFETIME = 2.5;
 
-        // Check for special blocks that need to be removed
+        // Handle special blocks first
         const updatedBlocks = currentBlocks.filter((block) => {
           const blockAge = (Date.now() - block.createdAt) / 1000;
 
+          // If it's a special block that has exceeded its lifetime
           if (
             (block.type === "avoid" ||
               block.type === "extraLive" ||
               block.type === "coins") &&
             blockAge >= SPECIAL_BLOCK_LIFETIME
           ) {
+            // For avoid blocks, add points when they disappear successfully
             if (block.type === "avoid") {
               prev.score += prev.doubleScoreActive ? 20 : 10;
             }
-            return false;
+            return false; // Remove the block
           }
-          return true;
+          return true; // Keep other blocks
         });
 
-        // Decrease timer
         const newTimer = Math.max(0, prev.pageTimer - 0.1);
+        // console.log("Timer update:", newTimer);
 
-        // If timer reaches 0, handle extra lives
+        // Handle regular timer reaching 0
         if (newTimer === 0) {
           const remainingRegularBlocks = updatedBlocks.filter(
             (block) => !["avoid", "extraLive", "coins"].includes(block.type)
           ).length;
 
-          // If no regular blocks remain, just reset timer
-          if (remainingRegularBlocks === 0) {
-            return {
-              ...prev,
-              blocks: updatedBlocks,
-              pageTimer: 6,
-            };
-          }
-
           // If there are remaining blocks but user has enough extra lives
-          if (extraLives >= remainingRegularBlocks) {
-            // Consume the required number of extra lives
+          if (
+            remainingRegularBlocks > 0 &&
+            extraLives >= remainingRegularBlocks
+          ) {
             consumeMultipleExtraLives(userId, remainingRegularBlocks);
-
             return {
               ...prev,
               blocks: [], // Clear all blocks
@@ -387,19 +441,21 @@ export default function SwipeGame() {
           }
 
           // If not enough extra lives, game over
-          return {
-            ...prev,
-            isGameOver: true,
-            blocks: [],
-            transitioning: false,
-          };
+          if (remainingRegularBlocks > 0) {
+            return {
+              ...prev,
+              isGameOver: true,
+              blocks: [],
+              transitioning: false,
+            };
+          }
         }
 
         return {
           ...prev,
           blocks: updatedBlocks,
           pageTimer: newTimer,
-          score: prev.score,
+          score: prev.score, // This will include any points from avoided blocks
         };
       });
     }, 100);
@@ -426,42 +482,37 @@ export default function SwipeGame() {
     }
   };
 
+  // Update handleBlockSuccess for tutorial end
   const handleBlockSuccess = useCallback(
     (blockId, blockType) => {
-      // Initialize sound manager on first interaction
       soundManager.initialize();
 
       setGameState((prev) => {
-        // Ensure we have valid blocks array
         const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
 
         if (prev.isInTutorial) {
-          // For tutorial blocks, just move to the next tutorial block
           if (prev.tutorialIndex < tutorialBlocks.length - 1) {
-            console.log(
-              "Moving to next tutorial block:",
-              prev.tutorialIndex + 1
-            ); // Debug log
             return {
               ...prev,
-              blocks: [], // Clear blocks to allow new tutorial block to spawn
+              blocks: [],
               tutorialIndex: prev.tutorialIndex + 1,
               transitioning: true,
             };
           } else {
             // End of tutorial, transition to regular game
-            console.log("Ending tutorial, starting game"); // Debug log
+            console.log("Ending tutorial, starting game");
             soundManager.play("background");
             return {
               ...prev,
-              blocks: [], // Clear blocks to allow game blocks to spawn
+              blocks: [],
               isInTutorial: false,
-              transitioning: true,
               tutorialIndex: 0,
+              transitioning: false, // Set to false immediately
+              score: 0,
+              pageTimer: 6,
             };
           }
         } else {
-          // Regular game block handling
           if (blockType === "extraLive") {
             addShopItems(userId, "extra-lives", 1);
             return {
@@ -498,22 +549,60 @@ export default function SwipeGame() {
             };
           } else {
             const scoreIncrement = doubleScoreActive ? 20 : 10;
+            const newBlocks = currentBlocks.filter((b) => b.id !== blockId);
+
+            // Get the current max blocks based on score (this is what we use for bonus calculation)
+            const currentMaxBlocks = Math.min(
+              9,
+              1 + Math.floor(prev.score / 75)
+            );
+
+            // Count remaining regular blocks (excluding special blocks)
+            const remainingRegularBlocks = newBlocks.filter(
+              (b) => !["avoid", "extraLive", "coins"].includes(b.type)
+            ).length;
+
+            // Count total regular blocks in current page (before removing the current block)
+            const totalRegularBlocks = currentBlocks.filter(
+              (b) => !["avoid", "extraLive", "coins"].includes(b.type)
+            ).length;
+
+            // Check if this was the last regular block
+            if (remainingRegularBlocks === 0 && totalRegularBlocks > 0) {
+              const timeLeft = prev.pageTimer;
+
+              // Calculate bonus using current max blocks (not the actual blocks on screen)
+              const rawBonus = timeLeft * currentMaxBlocks;
+              const timerBonus = roundToNearest5(rawBonus);
+
+              console.log("Timer bonus calculation:", {
+                currentMaxBlocks,
+                timeLeft,
+                rawBonus,
+                roundedBonus: timerBonus,
+              });
+
+              return {
+                ...prev,
+                blocks: newBlocks, // Keep special blocks on the page
+                score: prev.score + scoreIncrement + timerBonus,
+                lastTimerBonus: {
+                  amount: timerBonus,
+                  timestamp: Date.now(),
+                },
+                transitioning: false,
+              };
+            }
+
             return {
               ...prev,
               score: prev.score + scoreIncrement,
-              blocks: currentBlocks.filter((b) => b.id !== blockId),
+              blocks: newBlocks,
+              transitioning: false,
             };
           }
         }
       });
-
-      // Add a small delay to reset transitioning state
-      setTimeout(() => {
-        setGameState((prev) => ({
-          ...prev,
-          transitioning: false,
-        }));
-      }, 100);
     },
     [userId, doubleScoreActive]
   );
@@ -811,6 +900,24 @@ export default function SwipeGame() {
           />
         </div>
       )}
+
+      {/* Updated Timer Bonus Display */}
+      <AnimatePresence>
+        {gameState.lastTimerBonus &&
+          Date.now() - gameState.lastTimerBonus.timestamp < 1000 && (
+            <motion.div
+              initial={{ opacity: 0, y: 0 }}
+              animate={{ opacity: 1, y: 5 }}
+              exit={{ opacity: 0 }}
+              className="fixed top-[7vh] left-[16px] z-40" // Align with score position
+              transition={{ duration: 0.2 }}
+            >
+              <div className="text-lg font-bold text-green-400 bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
+                +{gameState.lastTimerBonus.amount}
+              </div>
+            </motion.div>
+          )}
+      </AnimatePresence>
 
       {/* Add Mute Button - Only show when not in tutorial */}
       {!gameState.isInTutorial && !gameState.isGameOver && (

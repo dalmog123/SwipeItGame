@@ -11,6 +11,14 @@ export default function Header({
   extraLives,
   doubleScoreActive,
 }) {
+  // Calculate potential bonus (only for non-tutorial)
+  const getPotentialBonus = () => {
+    if (isInTutorial) return null;
+    const targetBlockCount = Math.min(9, 1 + Math.floor(score / 75));
+    const potentialBonus = roundToNearest5(pageTimer * targetBlockCount);
+    return potentialBonus;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -63,3 +71,8 @@ export default function Header({
     </motion.div>
   );
 }
+
+// Add this helper function
+const roundToNearest5 = (num) => {
+  return Math.round(num / 5) * 5;
+};

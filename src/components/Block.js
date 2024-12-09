@@ -93,13 +93,13 @@ export default function Block({
 
   const handleBlockInteraction = useCallback(
     (e, interactionType) => {
-      console.log("Interaction Attempted:", interactionType, block.type);
-      console.log("Current States:", {
-        isTransitioning,
-        isFrozen,
-        isHandled,
-        isAnimating,
-      });
+      // console.log("Interaction Attempted:", interactionType, block.type);
+      // console.log("Current States:", {
+      //   isTransitioning,
+      //   isFrozen,
+      //   isHandled,
+      //   isAnimating,
+      // });
 
       if (
         isTransitioning ||
