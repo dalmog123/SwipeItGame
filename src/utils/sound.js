@@ -122,6 +122,14 @@ class SoundManager {
     this.muted = !this.muted;
     if (this.muted) {
       this.stopAll();
+    } else {
+      // When unmuting, resume background music from saved position
+      const backgroundSound = this.sounds.background;
+      if (backgroundSound) {
+        backgroundSound.currentTime = this.backgroundPosition;
+        backgroundSound.volume = 0.3;
+        backgroundSound.play();
+      }
     }
     return this.muted;
   }

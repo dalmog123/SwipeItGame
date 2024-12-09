@@ -129,15 +129,22 @@ export default function SwipeGame() {
   const handlePause = useCallback(() => {
     setIsPaused(true);
     soundManager.setMuffled(true);
+    // Stop music and save position when pausing
+    soundManager.stopAll();
   }, []);
 
   const handleResume = useCallback(() => {
     setIsPaused(false);
     soundManager.setMuffled(false);
+    // Resume background music when unpausing
     if (!gameState.isInTutorial && !soundManager.getMuteState()) {
-      resumeBackgroundMusic();
+      soundManager.play("background", {
+        muffled: gameState.isGameOver,
+        volume: gameState.isGameOver ? 0.1 : 0.3,
+        resumeFrom: true,
+      });
     }
-  }, [gameState.isGameOver, gameState.isInTutorial, resumeBackgroundMusic]);
+  }, [gameState.isGameOver, gameState.isInTutorial]);
 
   const handleQuit = useCallback(() => {
     setIsPaused(false);
@@ -831,11 +838,16 @@ export default function SwipeGame() {
   // Add state for mute
   const [isMuted, setIsMuted] = useState(soundManager.getMuteState());
 
-  // Add mute toggle handler
+  // Update mute toggle handler
   const handleMuteToggle = useCallback(() => {
     const muted = soundManager.toggleMute();
     setIsMuted(muted);
-  }, []);
+
+    // If unmuting and not in tutorial, resume background music
+    if (!muted && !gameState.isInTutorial) {
+      resumeBackgroundMusic();
+    }
+  }, [gameState.isInTutorial, resumeBackgroundMusic]);
 
   // Add new state for current theme
   const [currentTheme, setCurrentTheme] = useState(scoreThemes[0]);
