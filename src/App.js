@@ -11,6 +11,7 @@ import {
   CircleDollarSign,
   Volume2,
   VolumeX,
+  Pause,
 } from "lucide-react";
 import Header from "./components/Header";
 import GameOver from "./components/GameOver";
@@ -33,6 +34,7 @@ import { defaultAchievements } from "./config/achievements";
 import { soundManager } from "./utils/sound";
 import { scoreThemes, getThemeForScore } from "./config/themes";
 import { motion, AnimatePresence } from "framer-motion";
+import PauseMenu from "./components/PauseMenu";
 
 const actions = [
   { type: "swipeLeft", icon: ArrowLeft, color: "#FF6B6B" },
@@ -101,11 +103,49 @@ export default function SwipeGame() {
   // Initialize coins from localStorage
   const [coins, setCoins] = useState(0);
 
+  // Add isPaused state here with other state declarations
+  const [isPaused, setIsPaused] = useState(false);
+
   // New state for Double Score activation
   const [doubleScoreActive, setDoubleScoreActive] = useState(false);
 
   // Add state for extra lives
   const [extraLives, setExtraLives] = useState(0);
+
+  // Move resumeBackgroundMusic before all handlers
+  const resumeBackgroundMusic = useCallback(() => {
+    if (soundManager.getMuteState()) return;
+
+    // Don't stop the music, just resume from current position
+    soundManager.initialize();
+    soundManager.play("background", {
+      muffled: gameState.isGameOver,
+      volume: gameState.isGameOver ? 0.1 : 0.3,
+      resumeFrom: true,
+    });
+  }, [gameState.isGameOver]);
+
+  // Then define handlers that use it
+  const handlePause = useCallback(() => {
+    setIsPaused(true);
+    soundManager.setMuffled(true);
+  }, []);
+
+  const handleResume = useCallback(() => {
+    setIsPaused(false);
+    soundManager.setMuffled(false);
+    if (!gameState.isInTutorial && !soundManager.getMuteState()) {
+      resumeBackgroundMusic();
+    }
+  }, [gameState.isGameOver, gameState.isInTutorial, resumeBackgroundMusic]);
+
+  const handleQuit = useCallback(() => {
+    setIsPaused(false);
+    setGameState((prev) => ({
+      ...prev,
+      isGameOver: true,
+    }));
+  }, []);
 
   // Add listener for shop items
   useEffect(() => {
@@ -178,7 +218,11 @@ export default function SwipeGame() {
 
   const [nextRareScore, setNextRareScore] = useState(200);
 
+  // Update resetGame
   const resetGame = useCallback(() => {
+    // Save current music position before state changes
+    const currentPosition = soundManager.sounds.background?.currentTime || 0;
+
     setGameState({
       blocks: [],
       score: 0,
@@ -197,21 +241,10 @@ export default function SwipeGame() {
 
     // Only play sounds if not muted
     if (!soundManager.getMuteState()) {
-      // First unmute with a longer transition
       soundManager.setMuffled(false);
-
-      // Then after a short delay, play the background music
-      setTimeout(() => {
-        soundManager.play("background", {
-          muffled: false,
-          volume: 0.3, // Start at lower volume
-        });
-      }, 100);
-
-      // Gradually increase volume to normal
-      setTimeout(() => {
-        soundManager.setMuffled(false);
-      }, 500);
+      // Force the saved position
+      soundManager.backgroundPosition = currentPosition;
+      resumeBackgroundMusic();
     }
 
     // Rest of your reset logic
@@ -232,7 +265,7 @@ export default function SwipeGame() {
     }
 
     setNextRareScore(200);
-  }, [userId]);
+  }, [userId, resumeBackgroundMusic]);
 
   // Update handleCoinsChange to handle zero explicitly
   const handleCoinsChange = useCallback((newCoins) => {
@@ -375,7 +408,12 @@ export default function SwipeGame() {
 
   // Update the timer effect to properly handle avoid blocks
   useEffect(() => {
-    if (gameState.isGameOver || gameState.isInTutorial || gameState.isFrozen)
+    if (
+      gameState.isGameOver ||
+      gameState.isInTutorial ||
+      gameState.isFrozen ||
+      isPaused
+    )
       return;
 
     console.log("Timer effect running, gameState:", {
@@ -467,6 +505,7 @@ export default function SwipeGame() {
     gameState.isFrozen,
     extraLives,
     userId,
+    isPaused,
   ]);
 
   // Add this helper function to consume multiple extra lives
@@ -881,6 +920,35 @@ export default function SwipeGame() {
     }
   }, [pendingInteractions, isProcessingInteraction, handleInteraction]);
 
+  // Add back the visibility/focus handlers
+  useEffect(() => {
+    // Handle page visibility change
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        soundManager.stopAll();
+        if (!gameState.isInTutorial && !gameState.isGameOver && !isPaused) {
+          handlePause();
+        }
+      }
+    };
+
+    // Handle window blur (when app loses focus)
+    const handleBlur = () => {
+      soundManager.stopAll();
+      if (!gameState.isInTutorial && !gameState.isGameOver && !isPaused) {
+        handlePause();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [gameState.isGameOver, gameState.isInTutorial, isPaused, handlePause]);
+
   return (
     <motion.div
       className="flex flex-col min-h-screen touch-none select-none"
@@ -921,16 +989,24 @@ export default function SwipeGame() {
 
       {/* Add Mute Button - Only show when not in tutorial */}
       {!gameState.isInTutorial && !gameState.isGameOver && (
-        <button
-          onClick={handleMuteToggle}
-          className="fixed top-[10vh] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
-        >
-          {soundManager.getMuteState() ? (
-            <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
-          ) : (
-            <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
-          )}
-        </button>
+        <>
+          <button
+            onClick={handleMuteToggle}
+            className="fixed top-[10vh] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
+          >
+            {soundManager.getMuteState() ? (
+              <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+            ) : (
+              <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+            )}
+          </button>
+          <button
+            onClick={handlePause}
+            className="fixed top-[calc(10vh+50px)] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
+          >
+            <Pause className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+          </button>
+        </>
       )}
 
       <div>
@@ -986,6 +1062,9 @@ export default function SwipeGame() {
           </div>
         </div>
       )}
+
+      {/* Add the pause menu */}
+      {isPaused && <PauseMenu onResume={handleResume} onQuit={handleQuit} />}
     </motion.div>
   );
 }
