@@ -962,121 +962,123 @@ export default function SwipeGame() {
   }, [gameState.isGameOver, gameState.isInTutorial, isPaused, handlePause]);
 
   return (
-    <motion.div
-      className="flex flex-col min-h-screen touch-none select-none"
-      animate={{
-        backgroundColor: currentTheme.background,
-      }}
-      transition={{ duration: 1.5, ease: "easeInOut" }}
-    >
-      {!gameState.isGameOver && (
-        <div className="flex">
-          <Header
-            score={gameState.score}
-            pageTimer={gameState.pageTimer}
-            isInTutorial={gameState.isInTutorial}
-            extraLives={extraLives}
-            doubleScoreActive={doubleScoreActive}
-          />
-        </div>
-      )}
-
-      {/* Updated Timer Bonus Display */}
-      <AnimatePresence>
-        {gameState.lastTimerBonus &&
-          Date.now() - gameState.lastTimerBonus.timestamp < 1000 && (
-            <motion.div
-              initial={{ opacity: 0, y: 0 }}
-              animate={{ opacity: 1, y: 5 }}
-              exit={{ opacity: 0 }}
-              className="fixed top-[7vh] left-[16px] z-40" // Align with score position
-              transition={{ duration: 0.2 }}
-            >
-              <div className="text-lg font-bold text-green-400 bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
-                +{gameState.lastTimerBonus.amount}
-              </div>
-            </motion.div>
-          )}
-      </AnimatePresence>
-
-      {/* Add Mute Button - Only show when not in tutorial */}
-      {!gameState.isInTutorial && !gameState.isGameOver && (
-        <>
-          <button
-            onClick={handleMuteToggle}
-            className="fixed top-[10vh] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
-          >
-            {soundManager.getMuteState() ? (
-              <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
-            ) : (
-              <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
-            )}
-          </button>
-          <button
-            onClick={handlePause}
-            className="fixed top-[calc(10vh+50px)] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
-          >
-            <Pause className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
-          </button>
-        </>
-      )}
-
-      <div>
-        {gameState.isGameOver && (
-          <div>
-            <GameOver
+    <div className="safe-area-padding">
+      <motion.div
+        className="flex flex-col min-h-screen touch-none select-none"
+        animate={{
+          backgroundColor: currentTheme.background,
+        }}
+        transition={{ duration: 1.5, ease: "easeInOut" }}
+      >
+        {!gameState.isGameOver && (
+          <div className="flex">
+            <Header
               score={gameState.score}
-              resetGame={resetGame}
-              userId={userId}
-              isMuted={isMuted}
-              setIsMuted={setIsMuted}
+              pageTimer={gameState.pageTimer}
+              isInTutorial={gameState.isInTutorial}
+              extraLives={extraLives}
+              doubleScoreActive={doubleScoreActive}
             />
           </div>
         )}
-      </div>
 
-      {!gameState.isGameOver && (
-        <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
-          <div>
-            <div className="flex flex-col gap-4 px-4 pt-4 overflow-hidden">
-              {(gameState.blocks || []).map((block) => (
-                <Block
-                  key={block.id}
-                  block={{
-                    ...block,
-                    color: currentTheme.blocks[block.type],
-                  }}
-                  handleInteraction={queueInteraction}
-                  isInTutorial={gameState.isInTutorial}
-                  isTransitioning={gameState.transitioning}
-                  isFrozen={gameState.isFrozen && block.type !== "avoid"}
-                  currentTheme={currentTheme}
-                />
-              ))}
+        {/* Updated Timer Bonus Display */}
+        <AnimatePresence>
+          {gameState.lastTimerBonus &&
+            Date.now() - gameState.lastTimerBonus.timestamp < 1000 && (
+              <motion.div
+                initial={{ opacity: 0, y: 0 }}
+                animate={{ opacity: 1, y: 5 }}
+                exit={{ opacity: 0 }}
+                className="fixed top-[7vh] left-[16px] z-40" // Align with score position
+                transition={{ duration: 0.2 }}
+              >
+                <div className="text-lg font-bold text-green-400 bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
+                  +{gameState.lastTimerBonus.amount}
+                </div>
+              </motion.div>
+            )}
+        </AnimatePresence>
+
+        {/* Add Mute Button - Only show when not in tutorial */}
+        {!gameState.isInTutorial && !gameState.isGameOver && (
+          <>
+            <button
+              onClick={handleMuteToggle}
+              className="fixed top-[10vh] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
+            >
+              {soundManager.getMuteState() ? (
+                <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+              ) : (
+                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+              )}
+            </button>
+            <button
+              onClick={handlePause}
+              className="fixed top-[calc(10vh+50px)] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
+            >
+              <Pause className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+            </button>
+          </>
+        )}
+
+        <div>
+          {gameState.isGameOver && (
+            <div>
+              <GameOver
+                score={gameState.score}
+                resetGame={resetGame}
+                userId={userId}
+                isMuted={isMuted}
+                setIsMuted={setIsMuted}
+              />
+            </div>
+          )}
+        </div>
+
+        {!gameState.isGameOver && (
+          <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
+            <div>
+              <div className="flex flex-col gap-4 px-4 pt-4 overflow-hidden">
+                {(gameState.blocks || []).map((block) => (
+                  <Block
+                    key={block.id}
+                    block={{
+                      ...block,
+                      color: currentTheme.blocks[block.type],
+                    }}
+                    handleInteraction={queueInteraction}
+                    isInTutorial={gameState.isInTutorial}
+                    isTransitioning={gameState.transitioning}
+                    isFrozen={gameState.isFrozen && block.type !== "avoid"}
+                    currentTheme={currentTheme}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="pt-4">
+              {gameState.isInTutorial && gameState.blocks?.[0] && (
+                <div className="flex text-xl text-gray-600">
+                  {gameState.blocks[0].type === "doubleTap"
+                    ? "Double Tap"
+                    : gameState.blocks[0].type === "tap"
+                    ? "Tap"
+                    : gameState.blocks[0].type === "avoid"
+                    ? "Avoid"
+                    : gameState.blocks[0].type === "extraLive"
+                    ? "Gives Extra Life"
+                    : gameState.blocks[0].type === "coins"
+                    ? "Gives 15 Coins"
+                    : `Swipe ${gameState.blocks[0].type.replace("swipe", "")}`}
+                </div>
+              )}
             </div>
           </div>
-          <div className="pt-4">
-            {gameState.isInTutorial && gameState.blocks?.[0] && (
-              <div className="flex text-xl text-gray-600">
-                {gameState.blocks[0].type === "doubleTap"
-                  ? "Double Tap"
-                  : gameState.blocks[0].type === "tap"
-                  ? "Tap"
-                  : gameState.blocks[0].type === "avoid"
-                  ? "Avoid"
-                  : gameState.blocks[0].type === "extraLive"
-                  ? "Gives Extra Life"
-                  : gameState.blocks[0].type === "coins"
-                  ? "Gives 15 Coins"
-                  : `Swipe ${gameState.blocks[0].type.replace("swipe", "")}`}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Add the pause menu */}
-      {isPaused && <PauseMenu onResume={handleResume} onQuit={handleQuit} />}
-    </motion.div>
+        {/* Add the pause menu */}
+        {isPaused && <PauseMenu onResume={handleResume} onQuit={handleQuit} />}
+      </motion.div>
+    </div>
   );
 }
