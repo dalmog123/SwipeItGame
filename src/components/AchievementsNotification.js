@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Star, Coins, Trophy } from "lucide-react";
+import { soundManager } from "../utils/sound";
 
 const AchievementsNotification = ({
   show,
@@ -15,6 +16,9 @@ const AchievementsNotification = ({
     if (show) {
       setIsVisible(true);
       setShowStars(true);
+
+      // Play the achievement sound when the notification shows
+      soundManager.play("achievement_unlock", { volume: 0.5 });
 
       const displayTimer = setTimeout(() => {
         setIsVisible(false);
@@ -42,11 +46,12 @@ const AchievementsNotification = ({
       `}</style>
 
       <div
-        className={`
-        fixed bottom-0 left-1/2 -translate-x-1/2 mb-8 z-50
-        transition-all duration-300 ease-out
-        ${isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"}
-      `}
+        className={`fixed bottom-0 left-1/2 -translate-x-1/2 mb-8 z-50
+          transition-all duration-300 ease-out
+          ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
+          }
+        `}
       >
         <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl p-4 shadow-lg shadow-purple-500/20">
           {showStars && (
@@ -70,10 +75,9 @@ const AchievementsNotification = ({
             <div className="relative">
               <Trophy className="w-8 h-8 text-yellow-300" />
               <Star
-                className={`
-                absolute -top-1 -right-1 w-4 h-4 text-yellow-300 fill-yellow-300
-                ${showStars ? "animate-ping-short" : ""}
-              `}
+                className={`absolute -top-1 -right-1 w-4 h-4 text-yellow-300 fill-yellow-300 ${
+                  showStars ? "animate-ping-short" : ""
+                }`}
               />
             </div>
 

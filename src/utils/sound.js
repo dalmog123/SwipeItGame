@@ -15,11 +15,11 @@ class SoundManager {
       tap: "/assets/sounds/tap.mp3",
       collect: "/assets/sounds/collect.mp3",
       avoidtap: "/assets/sounds/avoidtap.mp3",
-      super: "/assets/sounds/super.mp3",
-      wow: "/assets/sounds/wow.mp3",
-      amazing: "/assets/sounds/amazing.mp3",
-      extreme: "/assets/sounds/extreme.mp3",
-      fantastic: "/assets/sounds/fantastic.mp3",
+      shop_buying: "/assets/sounds/shop_buying.wav",
+      shop_inside: "/assets/sounds/shop_inside.wav",
+      shop_outside: "/assets/sounds/shop_outside.wav",
+      balloon_pop: "/assets/sounds/balloon_pop.wav",
+      achievement_unlock: "/assets/sounds/achievement_unlock.wav",
     };
 
     Object.entries(soundFiles).forEach(([name, path]) => {

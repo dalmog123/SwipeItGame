@@ -11,7 +11,7 @@ export const defaultAchievements = [
     id: "coinCollector",
     title: "Coin Collector",
     description: "Collect coins",
-    levels: [100, 600, 2500],
+    levels: [350, 800, 2500],
     progress: 0,
     coinReward: 50,
   },

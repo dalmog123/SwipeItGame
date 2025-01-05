@@ -41,6 +41,7 @@ const Achievements = ({
   const achievementsListRef = useRef(null);
 
   const toggleTab = (tab) => {
+    handleTabClickSound(tab);
     setActiveTab(activeTab === tab ? null : tab);
   };
 
@@ -159,6 +160,7 @@ const Achievements = ({
     }
 
     if (coins >= item.price) {
+      soundManager.play("shop_buying");
       const success = await purchaseShopItem(userId, item.id, item.price);
       if (success) {
         console.log(`Successfully purchased ${item.name}`);
@@ -242,6 +244,14 @@ const Achievements = ({
       top: position === "top" ? 0 : achievementsListRef.current.scrollHeight,
       behavior: "smooth",
     });
+  };
+
+  const handleTabClickSound = (tab) => {
+    if (tab === "shop") {
+      soundManager.play("shop_inside");
+    } else {
+      soundManager.play("shop_outside");
+    }
   };
 
   // Improved scroll tracking

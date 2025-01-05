@@ -148,10 +148,11 @@ export default function SwipeGame() {
 
   const handleQuit = useCallback(() => {
     setIsPaused(false);
-    setGameState((prev) => ({
-      ...prev,
-      isGameOver: true,
-    }));
+    soundManager.backgroundPosition = soundManager.sounds.background?.currentTime || 0;
+    setGameState((prev) => ({ ...prev, isGameOver: true }));
+    if (!soundManager.getMuteState()) {
+      soundManager.play("background", { muffled: true, volume: 0.1, resumeFrom: true });
+    }
   }, []);
 
   // Add listener for shop items
