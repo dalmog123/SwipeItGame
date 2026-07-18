@@ -1,70 +1,80 @@
-# Getting Started with Create React App
+# Swipe It! 🎮
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A fast-paced arcade game of swipes and taps — react to each block before the timer runs out. Built with React, shipped as a **native iOS and Android app** via [Capacitor](https://capacitorjs.com), with the web version still deployable to GitHub Pages.
 
-## Available Scripts
+## How it's put together
 
-In the project directory, you can run:
+| Layer | What it is |
+| --- | --- |
+| `src/` | The game itself (React + Tailwind + framer-motion, Firebase for scores/shop) |
+| `src/utils/native.js` | Native bridge: haptics, share sheet, durable storage, status bar, splash, app lifecycle |
+| `ios/` | Native iOS app (Xcode project, Capacitor shell) |
+| `android/` | Native Android app (Gradle project, Capacitor shell) |
+| `capacitor.config.ts` | Shared native configuration (app id `com.kipi.swipeitgame`, splash/status bar) |
 
-### `npm start`
+Native niceties already wired in:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Haptic feedback** — light tick on every cleared block, success pulse on coins/extra lives, heavy thud + error buzz on mistakes and game over
+- **Native share sheet** for the referral link (falls back to web share/clipboard in browsers)
+- **Durable player identity** — the `userId` (your coins, achievements, high score) lives in iOS `UserDefaults` / Android `SharedPreferences` via Capacitor Preferences, so it survives WebView storage eviction; old web saves are migrated automatically
+- **Game-aware lifecycle** — auto-pause when the app is backgrounded; Android back button pauses/resumes instead of killing the game
+- **Status bar** that flips between light/dark icons to stay readable as score themes change
+- **Portrait-locked**, no rubber-band scrolling, no double-tap zoom, native splash screen
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Prerequisites
 
-### `npm test`
+- Node 18+ (`npm install` once after cloning)
+- A `.env` file in the project root with your Firebase web config:
+  ```
+  REACT_APP_FIREBASE_API_KEY=...
+  REACT_APP_FIREBASE_AUTH_DOMAIN=...
+  REACT_APP_FIREBASE_PROJECT_ID=...
+  REACT_APP_FIREBASE_STORAGE_BUCKET=...
+  REACT_APP_FIREBASE_MESSAGING_SENDER_ID=...
+  REACT_APP_FIREBASE_APP_ID=...
+  REACT_APP_FIREBASE_MEASUREMENT_ID=...
+  ```
+  (values are in Firebase Console → Project settings → Your apps)
+- **iOS**: a Mac with Xcode 15+ and CocoaPods (`sudo gem install cocoapods`)
+- **Android**: Android Studio with an SDK installed
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Development
 
-### `npm run build`
+```bash
+npm start          # run the game in the browser at localhost:3000
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Run on iOS (device or simulator)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+npm run ios
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+This builds the web bundle, syncs it into `ios/` (including `pod install`), and opens Xcode. In Xcode:
 
-### `npm run eject`
+1. Select the `App` target → *Signing & Capabilities* → pick your Apple developer team (first time only)
+2. Choose a simulator or your plugged-in iPhone and hit **Run** ▶
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Run on Android
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+npm run android
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Same flow: builds, syncs into `android/`, opens Android Studio — then **Run** ▶ on an emulator or device.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+> After pulling changes or editing web code, `npm run sync` refreshes both native projects without opening the IDEs.
 
-## Learn More
+## Ship it
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- **TestFlight / App Store**: In Xcode: Product → Archive → Distribute. Bump `MARKETING_VERSION` for each release. `ITSAppUsesNonExemptEncryption` is already set, so no export-compliance questionnaire on upload.
+- **Google Play**: In Android Studio: Build → Generate Signed App Bundle (create a keystore the first time — keep it safe!).
+- **Web (GitHub Pages)**: `npm run deploy` still publishes to https://dalmog123.github.io/SwipeItGame
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Versioning
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```bash
+npm run update-version        # patch bump of the in-game version
+npm run update-version:minor
+npm run update-version:major
+```

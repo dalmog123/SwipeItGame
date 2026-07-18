@@ -1,0 +1,7 @@
+/build/*
+!/build/.npmkeep
+
+# Capacitor generated web assets (created by npx cap sync)
+/src/main/assets/public
+/src/main/assets/capacitor.config.json
+/src/main/assets/capacitor.plugins.json

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { shareContent } from "../utils/native";
 
 export default function ShareModal({ isOpen, onClose, shareData, userId }) {
   useEffect(() => {
@@ -17,13 +18,18 @@ export default function ShareModal({ isOpen, onClose, shareData, userId }) {
         url: referralUrl,
       };
 
-      if (navigator.share) {
-        await navigator.share(shareDataWithReferral);
-      } else {
-        await navigator.clipboard.writeText(
-          `${shareDataWithReferral.text}\n${referralUrl}`
-        );
-        alert("Link copied to clipboard!");
+      // Native share sheet on iOS/Android; returns false in the browser
+      const nativelyShared = await shareContent(shareDataWithReferral);
+
+      if (!nativelyShared) {
+        if (navigator.share) {
+          await navigator.share(shareDataWithReferral);
+        } else {
+          await navigator.clipboard.writeText(
+            `${shareDataWithReferral.text}\n${referralUrl}`
+          );
+          alert("Link copied to clipboard!");
+        }
       }
       onClose();
     } catch (error) {

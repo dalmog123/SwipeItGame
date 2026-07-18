@@ -4,6 +4,12 @@
 
 
 
+html,
+body {
+  /* Native app feel: no pull-to-refresh, no rubber-band scrolling */
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -12,6 +18,18 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
+  /* Disable long-press callouts, text selection and tap flash inside the game */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Text fields (e.g. leaderboard nickname) still need selection/caret */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 code {

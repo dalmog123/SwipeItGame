@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Swipe It!</string>
+    <string name="title_activity_main">Swipe It!</string>
+    <string name="package_name">com.kipi.swipeitgame</string>
+    <string name="custom_url_scheme">com.kipi.swipeitgame</string>
+</resources>

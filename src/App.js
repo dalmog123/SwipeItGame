@@ -32,6 +32,14 @@ import {
 } from "./api/gameoverAPI";
 import { defaultAchievements } from "./config/achievements";
 import { soundManager } from "./utils/sound";
+import {
+  haptics,
+  storage,
+  onAppStateChange,
+  onBackButton,
+  minimizeApp,
+  setStatusBarForBackground,
+} from "./utils/native";
 import { scoreThemes, getThemeForScore } from "./config/themes";
 import { motion, AnimatePresence } from "framer-motion";
 import PauseMenu from "./components/PauseMenu";
@@ -186,8 +194,7 @@ export default function SwipeGame() {
   }, [userId, doubleScoreActive]);
 
   useEffect(() => {
-    // Check if the user ID is already stored
-    const storedUserId = localStorage.getItem("userId");
+    let cancelled = false;
 
     const initializeNewUser = async (newUserId) => {
       try {
@@ -201,21 +208,35 @@ export default function SwipeGame() {
           claimedRewards: {},
           achievements: defaultAchievements,
         });
+        if (cancelled) return;
         setUserId(newUserId);
-        localStorage.setItem("userId", newUserId);
+        await storage.set("userId", newUserId);
       } catch (error) {
         console.error("Error initializing new user:", error);
       }
     };
 
-    if (storedUserId) {
-      // If exists, set it in the state
-      setUserId(storedUserId);
-    } else {
-      // Generate a new user ID and initialize their data
-      const newUserId = Math.random().toString(36).substr(2, 9);
-      initializeNewUser(newUserId);
-    }
+    const loadUser = async () => {
+      // Durable native storage (with migration from old localStorage saves) —
+      // the userId is the player's whole account, so it must survive
+      // WebView data eviction on device.
+      const storedUserId = await storage.get("userId");
+      if (cancelled) return;
+
+      if (storedUserId) {
+        // If exists, set it in the state
+        setUserId(storedUserId);
+      } else {
+        // Generate a new user ID and initialize their data
+        const newUserId = Math.random().toString(36).substr(2, 9);
+        initializeNewUser(newUserId);
+      }
+    };
+
+    loadUser();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [interactionState, setInteractionState] = useState({
@@ -534,6 +555,13 @@ export default function SwipeGame() {
     (blockId, blockType) => {
       soundManager.initialize();
 
+      // Native haptic feedback: rare pickups get a stronger "success" pulse
+      if (blockType === "coins" || blockType === "extraLive") {
+        haptics.success();
+      } else {
+        haptics.light();
+      }
+
       setGameState((prev) => {
         const currentBlocks = Array.isArray(prev.blocks) ? prev.blocks : [];
 
@@ -715,6 +743,9 @@ export default function SwipeGame() {
             return;
           }
 
+          // Touching an avoid block is a hard mistake — heavy haptic thud
+          haptics.heavy();
+
           // First check for extra life
           const hasExtraLife = await checkAndConsumeExtraLife(userId);
 
@@ -823,6 +854,7 @@ export default function SwipeGame() {
     if (gameState.isGameOver) {
       // Instead of stopping, muffle the background music
       soundManager.setMuffled(true);
+      haptics.error();
     } else {
       // Normal background music during gameplay
       soundManager.setMuffled(false);
@@ -860,6 +892,14 @@ export default function SwipeGame() {
       setCurrentTheme(newTheme);
     }
   }, [gameState.score]);
+
+  // Keep the native status bar readable against the current background
+  // (game-over screen uses a blue gradient, otherwise the score theme color)
+  useEffect(() => {
+    setStatusBarForBackground(
+      gameState.isGameOver ? "#60a5fa" : currentTheme.background
+    );
+  }, [gameState.isGameOver, currentTheme]);
 
   // Add this effect after your other useEffects
   useEffect(() => {
@@ -956,11 +996,42 @@ export default function SwipeGame() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleBlur);
 
+    // Native app lifecycle (more reliable than visibility/blur inside the
+    // iOS/Android WebView): pause the game when the app is backgrounded.
+    const removeAppStateListener = onAppStateChange((isActive) => {
+      if (!isActive) {
+        handleBlur();
+      }
+    });
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
+      removeAppStateListener();
     };
   }, [gameState.isGameOver, gameState.isInTutorial, isPaused, handlePause]);
+
+  // Android hardware/gesture back button: pause during play, resume from
+  // pause, otherwise background the app instead of killing it.
+  useEffect(() => {
+    const removeBackListener = onBackButton(() => {
+      if (isPaused) {
+        handleResume();
+      } else if (!gameState.isInTutorial && !gameState.isGameOver) {
+        handlePause();
+      } else {
+        minimizeApp();
+      }
+    });
+
+    return removeBackListener;
+  }, [
+    isPaused,
+    gameState.isInTutorial,
+    gameState.isGameOver,
+    handlePause,
+    handleResume,
+  ]);
 
   return (
     <div className="safe-area-padding">
