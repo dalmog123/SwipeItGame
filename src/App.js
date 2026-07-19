@@ -1047,7 +1047,7 @@ export default function SwipeGame() {
                 className="fixed top-[7vh] left-[16px] z-40" // Align with score position
                 transition={{ duration: 0.2 }}
               >
-                <div className="text-lg font-bold text-green-400 bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
+                <div className="font-numeric text-lg font-bold text-neon-down text-glow bg-black/40 px-3 py-1 rounded-full whitespace-nowrap">
                   +{gameState.lastTimerBonus.amount}
                 </div>
               </motion.div>
@@ -1059,19 +1059,19 @@ export default function SwipeGame() {
           <>
             <button
               onClick={handleMuteToggle}
-              className="fixed top-[10vh] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
+              className="fixed top-[10vh] right-[3%] z-50 p-2 bg-white/10 border border-white/15 backdrop-blur-sm rounded-full hover:bg-white/20 transition-colors w-10 h-10 flex items-center justify-center"
             >
               {soundManager.getMuteState() ? (
-                <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+                <VolumeX className="w-5 h-5 text-ink-hi" />
               ) : (
-                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+                <Volume2 className="w-5 h-5 text-ink-hi" />
               )}
             </button>
             <button
               onClick={handlePause}
-              className="fixed top-[calc(10vh+50px)] right-[2%] z-50 p-1.5 sm:p-2 md:p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors min-w-[24px] min-h-[24px] max-w-[40px] max-h-[40px] flex items-center justify-center"
+              className="fixed top-[calc(10vh+52px)] right-[3%] z-50 p-2 bg-white/10 border border-white/15 backdrop-blur-sm rounded-full hover:bg-white/20 transition-colors w-10 h-10 flex items-center justify-center"
             >
-              <Pause className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 text-gray-600 min-w-[16px] min-h-[16px] max-w-[20px] max-h-[20px]" />
+              <Pause className="w-5 h-5 text-ink-hi" />
             </button>
           </>
         )}
@@ -1110,9 +1110,9 @@ export default function SwipeGame() {
                 ))}
               </div>
             </div>
-            <div className="pt-4">
+            <div className="pt-6">
               {gameState.isInTutorial && gameState.blocks?.[0] && (
-                <div className="flex text-xl text-gray-600">
+                <div className="font-display text-lg tracking-widest uppercase text-ink-lo animate-pulse">
                   {gameState.blocks[0].type === "doubleTap"
                     ? "Double Tap"
                     : gameState.blocks[0].type === "tap"

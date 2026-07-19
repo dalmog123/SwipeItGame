@@ -2,12 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Neon-arcade display + numeric fonts, bundled locally (no CDN — the native
+   app must be self-contained). Latin subsets only; ~43KB total. */
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+  src: url('./assets/fonts/orbitron.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/rajdhani-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/rajdhani-700.woff2') format('woff2');
+}
 
+/* Live theme values, updated from React so the safe-area/base can track the
+   current score tier. */
+:root {
+  --bg-base: #0e1117;
+}
 
 html,
 body {
   /* Native app feel: no pull-to-refresh, no rubber-band scrolling */
   overscroll-behavior: none;
+  /* Dark base so the notch / safe-area insets never flash white */
+  background-color: var(--bg-base);
 }
 
 body {
@@ -15,6 +45,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
+  color: #f5f7ff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
@@ -23,6 +54,17 @@ body {
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* Neon glow helpers (static — cheap on mobile WebViews). */
+.text-glow {
+  text-shadow: 0 0 8px currentColor, 0 0 20px currentColor;
+}
+.font-display {
+  font-family: 'Orbitron', system-ui, sans-serif;
+}
+.font-numeric {
+  font-family: 'Rajdhani', system-ui, sans-serif;
 }
 
 /* Text fields (e.g. leaderboard nickname) still need selection/caret */

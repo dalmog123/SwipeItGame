@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { Heart, CircleDollarSign, Coins } from "lucide-react";
 import { soundManager } from "../utils/sound";
+import { colors, hexA, glowFor, blockGlow } from "../config/designTokens";
 
 export default function Block({
   block,
@@ -335,10 +336,11 @@ export default function Block({
     );
   };
 
-  // Determine the neon color based on the original colors
-  const neonColor = currentTheme.originalColors
-    ? currentTheme.originalColors[block.type]
-    : block.color;
+  // Neon glow: avoid blocks are a dark tile that glows danger-red; every other
+  // block glows in its own accent color. Intensity rises with the score tier.
+  const glowColor = glowFor(block.type, block.color);
+  const glowIntensity = currentTheme.glow ?? 0.8;
+  const glowShadow = blockGlow(glowColor, glowIntensity);
 
   const animateProps = {
     x,
@@ -368,12 +370,15 @@ export default function Block({
     width: "90vw",
     maxWidth: "550px",
     height: "8.5vh",
-    backgroundColor: block.color || "#000000",
+    backgroundColor: block.color || colors.blocks.avoid,
+    borderRadius: 16,
+    border: `1.5px solid ${hexA(glowColor, 0.9)}`,
+    boxShadow: glowShadow,
     opacity: isFrozen && block.type !== "avoid" ? 0.5 : 1,
     pointerEvents:
       (isFrozen && block.type !== "avoid") || isAnimating ? "none" : "auto",
-    willChange: "transform, opacity, background-color",
-    color: neonColor,
+    willChange: "transform, opacity",
+    color: glowColor,
     transition: isThemeTransitioning ? "background-color 0.3s ease" : "none",
     transform: "translateZ(0)",
     backfaceVisibility: "hidden",
@@ -391,9 +396,9 @@ export default function Block({
             transition={{ duration: 0.2 }}
           >
             <motion.div
-              className={`rounded-lg shadow-lg flex items-center justify-center ${
+              className={`flex items-center justify-center ${
                 shouldShake && !isInteracting ? "animate-shake" : ""
-              } ${currentTheme.threshold === 10000 ? "neon-border" : ""}`}
+              }`}
               style={blockStyle}
               animate={animateProps}
               initial={false}
@@ -418,16 +423,16 @@ export default function Block({
               {block.icon && (
                 <block.icon
                   size="6vh"
-                  color={
-                    block.type === "avoid"
-                      ? currentTheme.blocks.avoid === "#ffffff"
-                        ? "#000000"
-                        : "#ffffff"
-                      : "#ffffff"
-                  }
+                  color={block.type === "avoid" ? colors.danger : "#ffffff"}
+                  style={{
+                    filter: `drop-shadow(0 0 6px ${hexA(glowColor, 0.9)})`,
+                  }}
                 />
               )}
-              <div className="absolute top-2 right-2 text-sm font-bold">
+              <div
+                className="absolute top-2 right-2 text-sm font-numeric font-bold"
+                style={{ color: "#ffffff" }}
+              >
                 {Math.ceil(block.remainingTime || 0)}
               </div>
             </motion.div>
