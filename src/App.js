@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -239,7 +239,11 @@ export default function SwipeGame() {
     };
   }, []);
 
-  const [interactionState, setInteractionState] = useState({
+  // Per-gesture tracking lives in a ref, not state: it never drives rendering,
+  // and it must be read/written synchronously inside the event handlers.
+  // (As React state it was one render behind, so a fast tap's "end" read a
+  // stale/empty "start" and the gesture was silently dropped.)
+  const interactionStateRef = useRef({
     start: null,
     lastTapTime: 0,
     tapCount: 0,
@@ -262,11 +266,11 @@ export default function SwipeGame() {
       transitioning: false,
       isFrozen: false,
     });
-    setInteractionState({
+    interactionStateRef.current = {
       start: null,
       lastTapTime: 0,
       tapCount: 0,
-    });
+    };
 
     // Only play sounds if not muted
     if (!soundManager.getMuteState()) {
@@ -684,10 +688,10 @@ export default function SwipeGame() {
 
   const handleInteraction = useCallback(
     async (e, type, block) => {
-      // Only call preventDefault if it exists (for touch events)
-      if (e.type.startsWith("touch") && e.preventDefault) {
-        e.preventDefault();
-      }
+      // Gestures run synchronously now (no interaction queue). Scroll/zoom is
+      // suppressed via CSS touch-action (touch-none on the container), and
+      // emulated mouse events are de-duped in Block.js, so no preventDefault
+      // is needed here — calling it on the passive touchstart only warned.
 
       if (gameState.isGameOver) return;
 
@@ -697,16 +701,13 @@ export default function SwipeGame() {
         : e;
 
       if (type === "start") {
-        setInteractionState((prev) => ({
-          ...prev,
-          start: {
-            x: point.clientX,
-            y: point.clientY,
-            time: Date.now(),
-          },
-        }));
+        interactionStateRef.current.start = {
+          x: point.clientX,
+          y: point.clientY,
+          time: Date.now(),
+        };
       } else if (type === "end") {
-        const start = interactionState.start;
+        const start = interactionStateRef.current.start;
         if (!start) return;
 
         const deltaX = point.clientX - start.x;
@@ -780,19 +781,13 @@ export default function SwipeGame() {
           const now = Date.now();
 
           if (block.type === "doubleTap") {
-            if (now - interactionState.lastTapTime < 300) {
+            if (now - interactionStateRef.current.lastTapTime < 300) {
               handleBlockSuccess(block.id, block.type);
-              setInteractionState((prev) => ({
-                ...prev,
-                lastTapTime: 0,
-                tapCount: 0,
-              }));
+              interactionStateRef.current.lastTapTime = 0;
+              interactionStateRef.current.tapCount = 0;
             } else {
-              setInteractionState((prev) => ({
-                ...prev,
-                lastTapTime: now,
-                tapCount: prev.tapCount + 1,
-              }));
+              interactionStateRef.current.lastTapTime = now;
+              interactionStateRef.current.tapCount += 1;
             }
           } else if (
             block.type === "tap" ||
@@ -822,16 +817,10 @@ export default function SwipeGame() {
           }
         }
 
-        setInteractionState((prev) => ({ ...prev, start: null }));
+        interactionStateRef.current.start = null;
       }
     },
-    [
-      gameState.isGameOver,
-      interactionState.start,
-      interactionState.lastTapTime,
-      handleBlockSuccess,
-      userId,
-    ]
+    [gameState.isGameOver, gameState.isInTutorial, handleBlockSuccess, userId]
   );
 
   // Update the effect that consumes double score
@@ -930,6 +919,14 @@ export default function SwipeGame() {
     // }
   }, [gameState.score]);
 
+  // Build the Audio objects at mount (idle time) rather than on the first
+  // block success, so the first tap of a session isn't competing with
+  // constructing 9 Audio elements on the main thread (a source of "the first
+  // interaction felt dropped").
+  useEffect(() => {
+    soundManager.initialize();
+  }, []);
+
   useEffect(() => {
     // Unlock audio on first user interaction
     const unlockAudio = async () => {
@@ -953,25 +950,10 @@ export default function SwipeGame() {
     }
   }, [userId]);
 
-  // Add these near your other state declarations
-  const [pendingInteractions, setPendingInteractions] = useState([]);
-  const [isProcessingInteraction, setIsProcessingInteraction] = useState(false);
-
-  const queueInteraction = useCallback((e, type, block) => {
-    setPendingInteractions((prev) => [...prev, { e, type, block }]);
-  }, []);
-
-  useEffect(() => {
-    if (pendingInteractions.length > 0 && !isProcessingInteraction) {
-      setIsProcessingInteraction(true);
-      const { e, type, block } = pendingInteractions[0];
-
-      handleInteraction(e, type, block).finally(() => {
-        setIsProcessingInteraction(false);
-        setPendingInteractions((prev) => prev.slice(1));
-      });
-    }
-  }, [pendingInteractions, isProcessingInteraction, handleInteraction]);
+  // (The old pendingInteractions queue was removed: it serialized every
+  // gesture across multiple render cycles — adding latency — and an avoid
+  // block's Firestore round-trip could stall the whole queue. Detection now
+  // runs synchronously in Block.js's handlers via handleInteraction.)
 
   // Add back the visibility/focus handlers
   useEffect(() => {
@@ -1119,7 +1101,7 @@ export default function SwipeGame() {
                       ...block,
                       color: currentTheme.blocks[block.type],
                     }}
-                    handleInteraction={queueInteraction}
+                    handleInteraction={handleInteraction}
                     isInTutorial={gameState.isInTutorial}
                     isTransitioning={gameState.transitioning}
                     isFrozen={gameState.isFrozen && block.type !== "avoid"}

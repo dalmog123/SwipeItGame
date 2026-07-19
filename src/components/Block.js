@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef, memo } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { Heart, CircleDollarSign, Coins } from "lucide-react";
 import { soundManager } from "../utils/sound";
-import { flushSync } from "react-dom";
 
 export default function Block({
   block,
@@ -19,10 +18,17 @@ export default function Block({
   const [isAnimating, setIsAnimating] = useState(false);
   const [blockPosition, setBlockPosition] = useState(null);
   const interactionTimeoutRef = useRef(null);
-  const [swipeStart, setSwipeStart] = useState(null);
   const [coinAnimations, setCoinAnimations] = useState([]);
   const [isInteracting, setIsInteracting] = useState(false);
-  const [isMouseDown, setIsMouseDown] = useState(false);
+
+  // Gesture bookkeeping kept in refs so the handlers read/write it
+  // synchronously — as React state, a fast press's "up" saw a stale value and
+  // was dropped. swipeStartRef: pointer origin; isMouseDownRef: mouse press
+  // state; lastTouchTimeRef: timestamp used to ignore the compatibility mouse
+  // events the browser emits after a real touch (which otherwise double-fire).
+  const swipeStartRef = useRef(null);
+  const isMouseDownRef = useRef(false);
+  const lastTouchTimeRef = useRef(0);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -112,7 +118,7 @@ export default function Block({
       }
 
       setIsTapped(false);
-      setSwipeStart(null);
+      swipeStartRef.current = null;
 
       const blockElement = e.currentTarget;
       const rect = blockElement.getBoundingClientRect();
@@ -183,19 +189,20 @@ export default function Block({
   );
 
   const handleTouchStart = (e) => {
+    lastTouchTimeRef.current = Date.now();
     if (isTransitioning || (isFrozen && block.type !== "avoid")) return;
     setIsInteracting(true);
     if (["tap", "doubleTap", "extraLive", "coins"].includes(block.type)) {
       setIsTapped(true);
     }
     const touch = e.touches[0];
-    setSwipeStart({ x: touch.clientX, y: touch.clientY });
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
     handleInteraction(e, "start", block);
   };
 
   const handleTouchMove = (e) => {
     if (
-      !swipeStart ||
+      !swipeStartRef.current ||
       isTransitioning ||
       (isFrozen && block.type !== "avoid") ||
       isHandled ||
@@ -203,8 +210,8 @@ export default function Block({
     )
       return;
     const touch = e.touches[0];
-    const deltaX = touch.clientX - swipeStart.x;
-    const deltaY = touch.clientY - swipeStart.y;
+    const deltaX = touch.clientX - swipeStartRef.current.x;
+    const deltaY = touch.clientY - swipeStartRef.current.y;
 
     if (block.type === "swipeLeft" || block.type === "swipeRight") {
       x.set(deltaX);
@@ -214,33 +221,36 @@ export default function Block({
   };
 
   const handleTouchEnd = (e) => {
+    lastTouchTimeRef.current = Date.now();
     setIsInteracting(false);
     handleBlockInteraction(e, "end");
   };
 
   const handleMouseDown = (e) => {
+    // Ignore the synthetic mouse events the browser fires right after a touch.
+    if (Date.now() - lastTouchTimeRef.current < 700) return;
     if (isTransitioning || (isFrozen && block.type !== "avoid")) return;
-    setIsMouseDown(true);
+    isMouseDownRef.current = true;
     setIsInteracting(true);
     if (["tap", "doubleTap", "extraLive", "coins"].includes(block.type)) {
       setIsTapped(true);
     }
-    setSwipeStart({ x: e.clientX, y: e.clientY });
+    swipeStartRef.current = { x: e.clientX, y: e.clientY };
     handleInteraction(e, "start", block);
   };
 
   const handleMouseMove = (e) => {
     if (
-      !isMouseDown ||
-      !swipeStart ||
+      !isMouseDownRef.current ||
+      !swipeStartRef.current ||
       isTransitioning ||
       (isFrozen && block.type !== "avoid") ||
       isHandled ||
       isAnimating
     )
       return;
-    const deltaX = e.clientX - swipeStart.x;
-    const deltaY = e.clientY - swipeStart.y;
+    const deltaX = e.clientX - swipeStartRef.current.x;
+    const deltaY = e.clientY - swipeStartRef.current.y;
 
     if (block.type === "swipeLeft" || block.type === "swipeRight") {
       x.set(deltaX);
@@ -250,14 +260,14 @@ export default function Block({
   };
 
   const handleMouseUp = (e) => {
-    if (!isMouseDown) return;
-    setIsMouseDown(false);
+    if (!isMouseDownRef.current) return;
+    isMouseDownRef.current = false;
     setIsInteracting(false);
     handleBlockInteraction(e, "end");
   };
 
   const handleMouseLeave = (e) => {
-    if (isMouseDown) {
+    if (isMouseDownRef.current) {
       handleMouseUp(e);
     }
   };
