@@ -16,6 +16,11 @@ import {
 import Header from "./components/Header";
 import GameOver from "./components/GameOver";
 import Block from "./components/Block";
+import HomeScreen from "./screens/HomeScreen";
+import ScoreBoard from "./components/ScoreBoard";
+import Achievement from "./components/Achievements";
+import { Home as HomeIcon } from "lucide-react";
+import { colors } from "./config/designTokens";
 import "./App.css";
 import {
   getShopItems,
@@ -113,6 +118,12 @@ export default function SwipeGame() {
 
   // Add isPaused state here with other state declarations
   const [isPaused, setIsPaused] = useState(false);
+
+  // Top-level screen: the app now opens on a Home screen instead of booting
+  // straight into the tutorial. "playing" hosts the existing tutorial → game →
+  // game-over flow; the others are menu screens reachable from Home.
+  // ("home" | "playing" | "leaderboard" | "shop" | "achievements" | "settings")
+  const [screen, setScreen] = useState("home");
 
   // New state for Double Score activation
   const [doubleScoreActive, setDoubleScoreActive] = useState(false);
@@ -299,6 +310,27 @@ export default function SwipeGame() {
 
     setNextRareScore(200);
   }, [userId, resumeBackgroundMusic]);
+
+  // First-ever Play shows the tutorial (gameState starts in the tutorial);
+  // every Play after that starts a fresh game via resetGame (no tutorial, and
+  // never resumes an abandoned run).
+  const startedOnceRef = useRef(false);
+  const handlePlay = useCallback(() => {
+    setIsPaused(false);
+    if (startedOnceRef.current) {
+      resetGame();
+    } else {
+      startedOnceRef.current = true;
+    }
+    setScreen("playing");
+  }, [resetGame]);
+
+  // Leave the current run and return to the Home screen.
+  const handleGoHome = useCallback(() => {
+    setIsPaused(false);
+    soundManager.stopAll();
+    setScreen("home");
+  }, []);
 
   // Update handleCoinsChange to handle zero explicitly
   const handleCoinsChange = useCallback((newCoins) => {
@@ -957,11 +989,17 @@ export default function SwipeGame() {
 
   // Add back the visibility/focus handlers
   useEffect(() => {
+    const shouldAutoPause = () =>
+      screen === "playing" &&
+      !gameState.isInTutorial &&
+      !gameState.isGameOver &&
+      !isPaused;
+
     // Handle page visibility change
     const handleVisibilityChange = () => {
       if (document.hidden) {
         soundManager.stopAll();
-        if (!gameState.isInTutorial && !gameState.isGameOver && !isPaused) {
+        if (shouldAutoPause()) {
           handlePause();
         }
       }
@@ -970,7 +1008,7 @@ export default function SwipeGame() {
     // Handle window blur (when app loses focus)
     const handleBlur = () => {
       soundManager.stopAll();
-      if (!gameState.isInTutorial && !gameState.isGameOver && !isPaused) {
+      if (shouldAutoPause()) {
         handlePause();
       }
     };
@@ -991,39 +1029,102 @@ export default function SwipeGame() {
       window.removeEventListener("blur", handleBlur);
       removeAppStateListener();
     };
-  }, [gameState.isGameOver, gameState.isInTutorial, isPaused, handlePause]);
+  }, [screen, gameState.isGameOver, gameState.isInTutorial, isPaused, handlePause]);
 
-  // Android hardware/gesture back button: pause during play, resume from
-  // pause, otherwise background the app instead of killing it.
+  // Android hardware/gesture back button, mapped per screen:
+  // - a menu sub-screen → back to Home
+  // - paused → resume; mid-game → pause; game-over or tutorial → Home
+  // - Home → background the app instead of killing it
   useEffect(() => {
     const removeBackListener = onBackButton(() => {
-      if (isPaused) {
-        handleResume();
-      } else if (!gameState.isInTutorial && !gameState.isGameOver) {
-        handlePause();
-      } else {
+      if (screen === "home") {
         minimizeApp();
+      } else if (screen !== "playing") {
+        handleGoHome();
+      } else if (isPaused) {
+        handleResume();
+      } else if (gameState.isGameOver || gameState.isInTutorial) {
+        handleGoHome();
+      } else {
+        handlePause();
       }
     });
 
     return removeBackListener;
   }, [
+    screen,
     isPaused,
     gameState.isInTutorial,
     gameState.isGameOver,
     handlePause,
     handleResume,
+    handleGoHome,
   ]);
 
   return (
     <div className="safe-area-padding">
-      <motion.div
-        className="flex flex-col min-h-screen touch-none select-none"
-        animate={{
-          backgroundColor: currentTheme.background,
-        }}
-        transition={{ duration: 1.5, ease: "easeInOut" }}
-      >
+      <AnimatePresence mode="wait">
+        {screen === "home" && (
+          <HomeScreen
+            key="home"
+            coins={coins}
+            onPlay={handlePlay}
+            onNavigate={setScreen}
+          />
+        )}
+
+        {screen === "leaderboard" && (
+          <motion.div
+            key="leaderboard"
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 60 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <ScoreBoard currentUserId={userId} onBack={handleGoHome} />
+          </motion.div>
+        )}
+
+        {(screen === "shop" ||
+          screen === "achievements" ||
+          screen === "settings") && (
+          <motion.div
+            key="menu"
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 60 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0"
+            style={{ backgroundColor: colors.bg.base }}
+          >
+            <Achievement
+              coins={coins}
+              currentAchievements={[]}
+              onCoinsChange={handleCoinsChange}
+              userId={userId}
+              isMuted={isMuted}
+              setIsMuted={setIsMuted}
+              initialTab={screen}
+              onBack={handleGoHome}
+            />
+          </motion.div>
+        )}
+
+        {screen === "playing" && (
+          <motion.div
+            key="game"
+            className="flex flex-col min-h-screen touch-none select-none"
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: 1,
+              backgroundColor: currentTheme.background,
+            }}
+            exit={{ opacity: 0 }}
+            transition={{
+              opacity: { duration: 0.25 },
+              backgroundColor: { duration: 1.5, ease: "easeInOut" },
+            }}
+          >
         {!gameState.isGameOver && (
           <div className="flex">
             <Header
@@ -1132,7 +1233,22 @@ export default function SwipeGame() {
 
         {/* Add the pause menu */}
         {isPaused && <PauseMenu onResume={handleResume} onQuit={handleQuit} />}
-      </motion.div>
+
+        {/* Return-to-Home affordance on the game-over screen (a proper one
+            arrives with the Results-screen redesign in a later phase) */}
+        {gameState.isGameOver && (
+          <button
+            onClick={handleGoHome}
+            className="fixed bottom-6 left-6 z-[60] flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-ink-hi backdrop-blur-sm"
+            aria-label="Home"
+          >
+            <HomeIcon className="w-5 h-5" />
+            <span className="font-numeric font-bold">Home</span>
+          </button>
+        )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

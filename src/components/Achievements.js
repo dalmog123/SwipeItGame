@@ -30,8 +30,10 @@ const Achievements = ({
   userId,
   isMuted,
   setIsMuted,
+  initialTab = null,
+  onBack,
 }) => {
-  const [activeTab, setActiveTab] = useState(null);
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [expandedSection, setExpandedSection] = useState(null);
   const [purchasedItems, setPurchasedItems] = useState({});
   const [localAchievements, setLocalAchievements] =
@@ -294,12 +296,23 @@ const Achievements = ({
         {/* Header with coins and navigation */}
         <div className="bg-gradient-to-r from-blue-400 to-green-500 p-2 shadow-lg w-full">
           <div className="flex justify-between items-center max-w-md mx-auto">
-            {/* Coins Display */}
-            <div className="flex items-center bg-black/20 px-2 py-1 rounded-full">
-              <Coins className="text-yellow-400 w-3 h-3 mr-1" />
-              <span className="text-white font-bold text-sm">
-                {displayCoins}
-              </span>
+            {/* Coins Display (+ optional Back when opened as a standalone screen) */}
+            <div className="flex items-center gap-2">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="flex items-center justify-center w-7 h-7 rounded-full bg-black/20 text-white hover:bg-black/30 transition-colors"
+                  aria-label="Back"
+                >
+                  <ChevronDown className="w-4 h-4 rotate-90" />
+                </button>
+              )}
+              <div className="flex items-center bg-black/20 px-2 py-1 rounded-full">
+                <Coins className="text-yellow-400 w-3 h-3 mr-1" />
+                <span className="text-white font-bold text-sm">
+                  {displayCoins}
+                </span>
+              </div>
             </div>
 
             {/* Navigation Icons */}
