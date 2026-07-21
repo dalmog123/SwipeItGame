@@ -19,6 +19,7 @@ import Block from "./components/Block";
 import HomeScreen from "./screens/HomeScreen";
 import ScoreBoard from "./components/ScoreBoard";
 import Achievement from "./components/Achievements";
+import TutorialHint from "./components/TutorialHint";
 import { Home as HomeIcon } from "lucide-react";
 import { colors } from "./config/designTokens";
 import "./App.css";
@@ -124,6 +125,10 @@ export default function SwipeGame() {
   // game-over flow; the others are menu screens reachable from Home.
   // ("home" | "playing" | "leaderboard" | "shop" | "achievements" | "settings")
   const [screen, setScreen] = useState("home");
+
+  // The tutorial is now shown only until it's completed once (persisted), not
+  // on every launch. Loaded from durable storage on mount.
+  const [tutorialDone, setTutorialDone] = useState(false);
 
   // New state for Double Score activation
   const [doubleScoreActive, setDoubleScoreActive] = useState(false);
@@ -311,19 +316,28 @@ export default function SwipeGame() {
     setNextRareScore(200);
   }, [userId, resumeBackgroundMusic]);
 
-  // First-ever Play shows the tutorial (gameState starts in the tutorial);
-  // every Play after that starts a fresh game via resetGame (no tutorial, and
-  // never resumes an abandoned run).
-  const startedOnceRef = useRef(false);
+  // Persist that the tutorial has been completed/skipped so it never shows again.
+  const markTutorialDone = useCallback(() => {
+    setTutorialDone(true);
+    storage.set("tutorialDone", "1");
+  }, []);
+
+  // Home → Play. First-ever Play runs the tutorial (gameState starts in it);
+  // once the tutorial is done, every Play starts a fresh game via resetGame
+  // (no tutorial, and never resumes an abandoned run).
   const handlePlay = useCallback(() => {
     setIsPaused(false);
-    if (startedOnceRef.current) {
+    if (tutorialDone) {
       resetGame();
-    } else {
-      startedOnceRef.current = true;
     }
     setScreen("playing");
-  }, [resetGame]);
+  }, [tutorialDone, resetGame]);
+
+  // Skip the tutorial: mark it done and drop straight into a fresh game.
+  const handleSkipTutorial = useCallback(() => {
+    markTutorialDone();
+    resetGame();
+  }, [markTutorialDone, resetGame]);
 
   // Leave the current run and return to the Home screen.
   const handleGoHome = useCallback(() => {
@@ -959,6 +973,24 @@ export default function SwipeGame() {
     soundManager.initialize();
   }, []);
 
+  // Load whether the tutorial has already been completed (durable storage).
+  useEffect(() => {
+    let cancelled = false;
+    storage.get("tutorialDone").then((v) => {
+      if (!cancelled && v) setTutorialDone(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Persist tutorial completion the moment a run leaves the tutorial.
+  useEffect(() => {
+    if (screen === "playing" && !gameState.isInTutorial && !tutorialDone) {
+      markTutorialDone();
+    }
+  }, [screen, gameState.isInTutorial, tutorialDone, markTutorialDone]);
+
   useEffect(() => {
     // Unlock audio on first user interaction
     const unlockAudio = async () => {
@@ -1177,6 +1209,16 @@ export default function SwipeGame() {
           </>
         )}
 
+        {/* Skip the tutorial (only shown while teaching) */}
+        {gameState.isInTutorial && (
+          <button
+            onClick={handleSkipTutorial}
+            className="fixed top-[3vh] right-[4%] z-50 rounded-full border border-white/15 bg-white/5 px-4 py-2 font-numeric text-sm font-semibold uppercase tracking-wider text-ink-lo backdrop-blur-sm hover:bg-white/10 transition-colors"
+          >
+            Skip
+          </button>
+        )}
+
         <div>
           {gameState.isGameOver && (
             <div>
@@ -1211,21 +1253,27 @@ export default function SwipeGame() {
                 ))}
               </div>
             </div>
-            <div className="pt-6">
+            <div className="pt-6 flex flex-col items-center gap-3">
               {gameState.isInTutorial && gameState.blocks?.[0] && (
-                <div className="font-display text-lg tracking-widest uppercase text-ink-lo animate-pulse">
-                  {gameState.blocks[0].type === "doubleTap"
-                    ? "Double Tap"
-                    : gameState.blocks[0].type === "tap"
-                    ? "Tap"
-                    : gameState.blocks[0].type === "avoid"
-                    ? "Avoid"
-                    : gameState.blocks[0].type === "extraLive"
-                    ? "Gives Extra Life"
-                    : gameState.blocks[0].type === "coins"
-                    ? "Gives 15 Coins"
-                    : `Swipe ${gameState.blocks[0].type.replace("swipe", "")}`}
-                </div>
+                <>
+                  <TutorialHint blockType={gameState.blocks[0].type} />
+                  <div className="font-display text-lg tracking-widest uppercase text-ink-lo">
+                    {gameState.blocks[0].type === "doubleTap"
+                      ? "Double Tap"
+                      : gameState.blocks[0].type === "tap"
+                      ? "Tap"
+                      : gameState.blocks[0].type === "avoid"
+                      ? "Avoid"
+                      : gameState.blocks[0].type === "extraLive"
+                      ? "Gives Extra Life"
+                      : gameState.blocks[0].type === "coins"
+                      ? "Gives 15 Coins"
+                      : `Swipe ${gameState.blocks[0].type.replace(
+                          "swipe",
+                          ""
+                        )}`}
+                  </div>
+                </>
               )}
             </div>
           </div>
