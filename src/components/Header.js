@@ -58,10 +58,25 @@ export default function Header({
 
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="flex items-center space-x-2 bg-white/5 border border-white/10 rounded-full px-4 py-2 h-full"
+              animate={pageTimer < 2 ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+              transition={
+                pageTimer < 2
+                  ? { duration: 0.5, repeat: Infinity }
+                  : { duration: 0.2 }
+              }
+              className={`flex items-center space-x-2 bg-white/5 border rounded-full px-4 py-2 h-full ${
+                pageTimer < 2 ? "border-neon-danger/60" : "border-white/10"
+              }`}
             >
-              <Clock className="text-neon-up" size={20} />
-              <span className="font-numeric text-xl font-bold text-ink-hi">
+              <Clock
+                className={pageTimer < 2 ? "text-neon-danger" : "text-neon-up"}
+                size={20}
+              />
+              <span
+                className={`font-numeric text-xl font-bold ${
+                  pageTimer < 2 ? "text-neon-danger text-glow" : "text-ink-hi"
+                }`}
+              >
                 {pageTimer.toFixed(1)}
               </span>
             </motion.div>

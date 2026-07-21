@@ -919,14 +919,22 @@ export default function SwipeGame() {
 
   // Add new state for current theme
   const [currentTheme, setCurrentTheme] = useState(scoreThemes[0]);
+  // Brief celebration when the score crosses into a new tier.
+  const [tierCelebration, setTierCelebration] = useState(null);
 
   // Add effect to handle theme changes based on score
   useEffect(() => {
     const newTheme = getThemeForScore(gameState.score);
     if (newTheme && newTheme.threshold !== currentTheme.threshold) {
+      // Leveling UP into a new tier is an event: flash the tier name + buzz.
+      if (newTheme.threshold > currentTheme.threshold) {
+        setTierCelebration({ name: newTheme.name, at: Date.now() });
+        haptics.medium();
+        setTimeout(() => setTierCelebration(null), 1800);
+      }
       setCurrentTheme(newTheme);
     }
-  }, [gameState.score]);
+  }, [gameState.score]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the native status bar readable against the current background
   // (game-over screen uses a blue gradient, otherwise the score theme color)
@@ -1185,6 +1193,39 @@ export default function SwipeGame() {
                 </div>
               </motion.div>
             )}
+        </AnimatePresence>
+
+        {/* Score-tier level-up celebration */}
+        <AnimatePresence>
+          {tierCelebration && (
+            <motion.div
+              key={tierCelebration.at}
+              className="fixed inset-0 z-30 pointer-events-none flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.div
+                className="absolute inset-0"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 1, 0] }}
+                transition={{ duration: 1.6, times: [0, 0.3, 1] }}
+                style={{
+                  boxShadow: `inset 0 0 140px 30px ${colors.blocks.doubleTap}55`,
+                }}
+              />
+              <motion.div
+                initial={{ scale: 0.7, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 18 }}
+                className="font-display text-3xl uppercase tracking-[0.3em] text-ink-hi text-center px-6"
+                style={{ textShadow: `0 0 18px ${colors.blocks.doubleTap}` }}
+              >
+                {tierCelebration.name}
+              </motion.div>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Add Mute Button - Only show when not in tutorial */}
