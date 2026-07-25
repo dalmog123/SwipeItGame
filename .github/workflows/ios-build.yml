@@ -1,0 +1,58 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ "claude/native-ios-android-game-3pd99u", "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build Native iOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Sync Capacitor iOS Project
+        run: npx cap sync ios
+
+      - name: Install CocoaPods Dependencies
+        run: |
+          cd ios/App
+          pod install
+
+      - name: Build iOS Application (xcodebuild)
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+                     -scheme App \
+                     -configuration Release \
+                     -sdk iphonesimulator \
+                     -derivedDataPath build/DerivedData \
+                     clean build \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO
+
+      - name: Zip Simulator App Artifact
+        run: |
+          cd build/DerivedData/Build/Products/Release-iphonesimulator
+          zip -r SwipeItGame-iOS-Simulator.zip App.app
+
+      - name: Upload Build Artifact to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwipeItGame-iOS-Simulator
+          path: build/DerivedData/Build/Products/Release-iphonesimulator/SwipeItGame-iOS-Simulator.zip
