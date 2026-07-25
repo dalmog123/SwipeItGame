@@ -17,6 +17,7 @@ import {
 import { defaultAchievements } from "../config/achievements";
 import ShareModal from "./ShareModal";
 import { soundManager } from "../utils/sound";
+import { colors } from "../config/designTokens";
 
 export default function GameOver({
   score,
@@ -30,22 +31,22 @@ export default function GameOver({
   const [swipeDirection, setSwipeDirection] = useState(null);
   const [floatingElements, setFloatingElements] = useState([
     {
-      icon: <BsFillBalloonHeartFill color="#FF6B6B" size={"6vh"} />,
+      icon: <BsFillBalloonHeartFill color="#FF5C72" size={"6vh"} />,
       delay: 0,
       popped: false,
     },
     {
-      icon: <BsFillBalloonHeartFill color="#FF006E" size={"6vh"} />,
+      icon: <BsFillBalloonHeartFill color="#FF2E93" size={"6vh"} />,
       delay: 0.5,
       popped: false,
     },
     {
-      icon: <BsFillBalloonHeartFill color="#FFBE0B" size={"6vh"} />,
+      icon: <BsFillBalloonHeartFill color="#FFD60A" size={"6vh"} />,
       delay: 1,
       popped: false,
     },
     {
-      icon: <BsFillBalloonHeartFill color="#000000" size={"6vh"} />,
+      icon: <BsFillBalloonHeartFill color="#38BDF8" size={"6vh"} />,
       delay: 1.5,
       popped: false,
     },
@@ -53,6 +54,7 @@ export default function GameOver({
   const [balloonsPoppedCount, setBalloonsPoppedCount] = useState(0);
   const [coins, setCoins] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  const [isNewRecord, setIsNewRecord] = useState(false);
   const [totalCoinsEarned, setTotalCoinsEarned] = useState(0);
   const [achievements, setAchievements] = useState(defaultAchievements);
   const [interactionState, setInteractionState] = useState({ start: null });
@@ -260,6 +262,7 @@ export default function GameOver({
         // Only update if we have a new high score
         console.log(score, currentHighScore);
         if (score > currentHighScore) {
+          setIsNewRecord(true);
           const highScoreReward = 100;
           const highScorerAchievement = defaultAchievements.find(
             (a) => a.id === "highScorer"
@@ -323,6 +326,13 @@ export default function GameOver({
     updateHighScore();
     setShowScore(true);
   }, [score, userId, achievements, checkAndAwardAchievements]);
+
+  // Always reveal the final score on the results screen, even if there is no
+  // userId / the backend is unreachable (the score is the centerpiece).
+  useEffect(() => {
+    const t = setTimeout(() => setShowScore(true), 250);
+    return () => clearTimeout(t);
+  }, []);
 
   const handleGameOver = useCallback(() => {
     if (!userId) return;
@@ -632,35 +642,25 @@ export default function GameOver({
     return () => clearTimeout(debounceTimeout);
   }, [userId, highScore, achievements, claimedRewards, balloonsPoppedCount, checkAndAwardAchievements]);
 
+  // Celebrate only a NEW HIGH SCORE (not every game over — confetti on a loss
+  // was tonally confusing).
   useEffect(() => {
-    const handleGameOver = () => {
-      // First burst
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFBE0B"],
-      });
+    if (!isNewRecord) return;
 
-      // Second burst after a small delay
-      setTimeout(() => {
-        confetti({
-          particleCount: 50,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0, y: 0.6 },
-        });
-        confetti({
-          particleCount: 50,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1, y: 0.6 },
-        });
-      }, 150);
-    };
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ["#FF2E93", "#38BDF8", "#2EE6D6", "#FFC93D", "#6EE7B7"],
+    });
 
-    handleGameOver();
-  }, []); // Run only once on mount
+    const t = setTimeout(() => {
+      confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0, y: 0.6 } });
+      confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1, y: 0.6 } });
+    }, 150);
+
+    return () => clearTimeout(t);
+  }, [isNewRecord]);
 
   useEffect(() => {
     if (achievementQueue.length > 0 && !currentAchievement) {
@@ -680,7 +680,7 @@ export default function GameOver({
       <div>
         {!scoreBoard ? (
           <>
-            <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-400 via-teal-300 to-green-500 p-4 sm:p-8 overflow-hidden">
+            <div className="flex flex-col items-center justify-center min-h-screen bg-bg-base p-4 sm:p-8 overflow-hidden">
               <Achievement
                 currentAchievements={achievements}
                 coins={coins}
@@ -698,14 +698,16 @@ export default function GameOver({
                   coins={currentAchievement.coins}
                 />
               )}
-              <div className="relative bg-gradient-to-br from-blue-300 via-teal-200 to-green-300 rounded-3xl shadow-2xl p-4 sm:p-8 mb-8 sm:mb-12 max-w-xs sm:max-w-md w-full text-center">
+              <div className="relative bg-bg-panel border border-line rounded-3xl shadow-2xl p-4 sm:p-8 mb-8 sm:mb-12 max-w-xs sm:max-w-md w-full text-center">
                 <motion.h1
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 300, damping: 10 }}
-                  className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-pink-600 mb-4 sm:mb-8"
+                  className={`font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold uppercase tracking-wider mb-4 sm:mb-8 ${
+                    isNewRecord ? "text-neon-coin text-glow" : "text-ink-hi"
+                  }`}
                 >
-                  Game Over!
+                  {isNewRecord ? "New Best!" : "Game Over"}
                 </motion.h1>
 
                 <AnimatePresence>
@@ -722,15 +724,23 @@ export default function GameOver({
                       className="mb-6 flex items-center justify-center"
                     >
                       <div className="flex flex-col items-center mr-4">
-                        <div className="text-6xl font-bold text-yellow-400 drop-shadow-glow animate-pulse">
+                        <div
+                          className={`font-display text-6xl font-bold text-glow ${
+                            isNewRecord ? "text-neon-coin" : "text-ink-hi"
+                          }`}
+                        >
                           {score !== undefined ? score : 0}
                         </div>
-                        <div className="text-md text-white mt-1">Points</div>
+                        <div className="font-numeric text-md text-ink-lo mt-1 uppercase tracking-widest">
+                          {highScore > 0
+                            ? `Best ${highScore.toLocaleString()}`
+                            : "Points"}
+                        </div>
                       </div>
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
-                        className="p-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full shadow-lg hover:shadow-xl transition duration-300 ease-in-out flex items-center justify-center"
+                        className="p-2 bg-white/10 border border-white/15 text-neon-coin rounded-full hover:bg-white/20 transition-colors flex items-center justify-center"
                         onClick={handleScoreBoard}
                         aria-label="Go to Scoreboard"
                       >
@@ -764,23 +774,27 @@ export default function GameOver({
                               : 0,
                           opacity: swipeDirection ? 0 : 1,
                         }
-                      : { scale: [1, 1.2, 1] }
+                      : { scale: 1 }
                   }
                   transition={
-                    swipeDirection
-                      ? { duration: 0.5 }
-                      : { repeat: Infinity, duration: 2 }
+                    swipeDirection ? { duration: 0.5 } : { duration: 0.2 }
                   }
-                  className="px-6 py-2 sm:px-8 sm:py-3 bg-gradient-to-r from-green-500 to-blue-700 text-white rounded-full text-lg sm:text-4xl font-bold shadow-lg hover:shadow-xl transition duration-300 ease-in-out mb-4 sm:mb-8"
+                  whileTap={{ scale: 0.96 }}
+                  className="font-display uppercase tracking-widest px-6 py-3 sm:px-8 sm:py-4 text-ink-hi rounded-full text-xl sm:text-3xl font-bold mb-4 sm:mb-8"
                   style={{
                     marginBottom: "env(safe-area-inset-bottom)",
                     width: "80%",
-                    cursor: "grab",
+                    cursor: "pointer",
                     alignSelf: "center",
+                    background:
+                      "linear-gradient(90deg, rgba(255,46,147,0.2), rgba(56,189,248,0.2))",
+                    border: `2px solid ${colors.blocks.doubleTap}`,
+                    boxShadow: `0 0 18px ${colors.blocks.doubleTap}66, 0 0 40px ${colors.blocks.swipeUp}44`,
+                    textShadow: "0 0 10px rgba(245,247,255,0.5)",
                   }}
                   onClick={() => resetGame()}
                 >
-                  Swipe Again!
+                  Play Again
                 </motion.button>
 
                 {/* Coin Animations */}
@@ -795,7 +809,7 @@ export default function GameOver({
                       animation: "coinFloat 1s ease-out forwards",
                     }}
                   >
-                    <div className="flex items-center text-purple-700 font-bold">
+                    <div className="flex items-center text-neon-coin font-bold">
                       +5 <Coins className="w-4 h-4 ml-1" />
                     </div>
                   </div>
@@ -823,7 +837,7 @@ export default function GameOver({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsShareModalOpen(true)}
-              className="fixed bottom-6 right-6 p-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl transition duration-300 ease-in-out flex items-center justify-center gap-2 z-50"
+              className="fixed bottom-6 right-6 p-3 bg-white/10 border border-white/15 text-ink-hi rounded-full hover:bg-white/20 transition-colors flex items-center justify-center gap-2 z-50 backdrop-blur-sm"
               aria-label="Share with friends"
             >
               <Share2 size={24} />
