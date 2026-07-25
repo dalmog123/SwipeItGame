@@ -117,23 +117,23 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-teal-500 to-green-600 p-2 sm:p-4 md:p-6 overflow-hidden">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-bg-base p-2 sm:p-4 md:p-6 overflow-hidden">
       <div
-        className="relative bg-gray-900 bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-3 sm:p-6 md:p-8 max-w-2xl w-full flex flex-col"
+        className="relative bg-bg-panel/80 border border-line backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-3 sm:p-6 md:p-8 max-w-2xl w-full flex flex-col"
         style={{ height: "95vh" }}
       >
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="fixed top-4 sm:top-6 md:top-8 left-4 sm:left-6 md:left-8 p-2 sm:p-2.5 md:p-3 rounded-full bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors z-50"
+          className="fixed top-4 sm:top-6 md:top-8 left-4 sm:left-6 md:left-8 p-2 sm:p-2.5 md:p-3 rounded-full bg-white/10 border border-white/15 text-ink-hi hover:bg-white/20 transition-colors z-50"
           onClick={onBack}
         >
           <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 min-w-[20px] min-h-[20px] max-w-[28px] max-h-[28px]" />
         </motion.button>
 
         <h1
-          className="font-bold text-center text-gray-100 mb-4"
-          style={{ fontSize: "clamp(1.2rem, 5vw, 4rem)" }}
+          className="font-display font-bold text-center text-ink-hi mb-4 tracking-widest uppercase"
+          style={{ fontSize: "clamp(1.1rem, 4.5vw, 3rem)" }}
         >
           Leaderboard
         </h1>
@@ -143,25 +143,25 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-600 bg-opacity-50 rounded-2xl p-2 sm:p-3 md:p-4 mb-4"
+            className="bg-neon-up/15 border border-neon-up/30 rounded-2xl p-2 sm:p-3 md:p-4 mb-4"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2 sm:space-x-4">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-blue-500 flex items-center justify-center">
-                  <span className="text-base sm:text-lg md:text-xl font-bold text-white">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-neon-up/30 flex items-center justify-center">
+                  <span className="font-numeric text-base sm:text-lg md:text-xl font-bold text-ink-hi">
                     #{userStats.rank}
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-ink-hi">
                     {userStats.player}
                   </h2>
-                  <p className="text-sm sm:text-base text-blue-200">
+                  <p className="text-sm sm:text-base text-ink-lo">
                     Your Ranking
                   </p>
                 </div>
               </div>
-              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
+              <div className="font-numeric text-xl sm:text-2xl md:text-3xl font-bold text-neon-up text-glow">
                 {userStats.score.toLocaleString()}
               </div>
             </div>
@@ -188,17 +188,17 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className={`flex items-center rounded-2xl p-2 sm:p-4 transition-colors ${
+              className={`flex items-center rounded-2xl p-2 sm:p-4 transition-colors border ${
                 score.userId === currentUserId
-                  ? "bg-blue-600 bg-opacity-50 hover:bg-opacity-70"
-                  : "bg-gray-800 bg-opacity-50 hover:bg-opacity-70"
+                  ? "bg-neon-up/15 border-neon-up/40 hover:bg-neon-up/25"
+                  : "bg-white/5 border-white/10 hover:bg-white/10"
               }`}
             >
               <div className="flex-grow">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-grow">
                     {getRankIcon(index + 1) || (
-                      <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 text-sm sm:text-base">
+                      <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/10 flex items-center justify-center text-ink-lo font-numeric text-sm sm:text-base">
                         {index + 1}
                       </span>
                     )}
@@ -210,7 +210,7 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                             type="text"
                             value={newName}
                             onChange={handleNameChange}
-                            className="bg-gray-700 text-gray-100 px-2 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-sm sm:text-base"
+                            className="bg-white/10 text-ink-hi px-2 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-neon-up w-full text-sm sm:text-base"
                             placeholder={score.player}
                             autoFocus
                           />
@@ -233,7 +233,7 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                         </div>
                       ) : (
                         <div className="flex items-center">
-                          <span className="text-base sm:text-xl font-semibold text-gray-100">
+                          <span className="text-base sm:text-xl font-semibold text-ink-hi">
                             {score.player}
                           </span>
                           {score.userId === currentUserId && (
@@ -243,7 +243,7 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                               onClick={() =>
                                 startEditing(score.id, score.player)
                               }
-                              className="ml-2 p-1 rounded-full text-gray-400 hover:text-gray-200 hover:bg-gray-700"
+                              className="ml-2 p-1 rounded-full text-ink-lo hover:text-ink-hi hover:bg-white/10"
                             >
                               <Edit2 size={16} />
                             </motion.button>
@@ -252,7 +252,7 @@ export default function ScoreBoard({ onBack = () => {}, currentUserId }) {
                       )}
                     </div>
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-blue-300 ml-2 sm:ml-4">
+                  <div className="font-numeric text-xl sm:text-3xl font-bold text-neon-up ml-2 sm:ml-4">
                     {score.score.toLocaleString()}
                   </div>
                 </div>

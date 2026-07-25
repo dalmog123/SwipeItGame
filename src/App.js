@@ -1139,7 +1139,7 @@ export default function SwipeGame() {
           >
             <Achievement
               coins={coins}
-              currentAchievements={[]}
+              currentAchievements={defaultAchievements}
               onCoinsChange={handleCoinsChange}
               userId={userId}
               isMuted={isMuted}

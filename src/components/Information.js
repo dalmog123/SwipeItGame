@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Tap,
   Circle,
   CircleDot,
   ArrowUp,
@@ -54,63 +53,63 @@ const Information = ({ onClose }) => {
       icon: <Circle className="w-4 h-4 text-white" />,
       name: "Tap",
       description: "Tap once to score",
-      bgColor: "bg-[#FFBE0B]",
+      bgColor: "bg-[#FFD60A]",
       textColor: "text-white",
     },
     {
       icon: <CircleDot className="w-4 h-4 text-white" />,
       name: "Double Tap",
       description: "Tap twice quickly to score",
-      bgColor: "bg-[#FF006E]",
+      bgColor: "bg-[#FF2E93]",
       textColor: "text-white",
     },
     {
       icon: <ArrowUp className="w-4 h-4 text-white" />,
       name: "Swipe Up",
       description: "Swipe upward to score",
-      bgColor: "bg-[#45B7D1]",
+      bgColor: "bg-[#38BDF8]",
       textColor: "text-white",
     },
     {
       icon: <ArrowDown className="w-4 h-4 text-white" />,
       name: "Swipe Down",
       description: "Swipe downward to score",
-      bgColor: "bg-[#96CEB4]",
+      bgColor: "bg-[#6EE7B7]",
       textColor: "text-white",
     },
     {
       icon: <ArrowLeft className="w-4 h-4 text-white" />,
       name: "Swipe Left",
       description: "Swipe left to score",
-      bgColor: "bg-[#FF6B6B]",
+      bgColor: "bg-[#FF5C72]",
       textColor: "text-white",
     },
     {
       icon: <ArrowRight className="w-4 h-4 text-white" />,
       name: "Swipe Right",
       description: "Swipe right to score",
-      bgColor: "bg-[#4ECDC4]",
+      bgColor: "bg-[#2EE6D6]",
       textColor: "text-white",
     },
     {
       icon: <Heart className="w-4 h-4 text-white" />,
       name: "Extra Life",
       description: "Gives one extra life",
-      bgColor: "bg-[#ff0000]",
+      bgColor: "bg-[#FF3B5C]",
       textColor: "text-white",
     },
     {
       icon: <Coins className="w-4 h-4 text-white" />,
       name: "Coins",
       description: "Gives 15 gold coins",
-      bgColor: "bg-[#22d65e]",
+      bgColor: "bg-[#FFC93D]",
       textColor: "text-white",
     },
     {
-      icon: <X className="w-4 h-4 text-white" />,
+      icon: <X className="w-4 h-4 text-[#FF3B5C]" />,
       name: "Avoid",
       description: "Avoid this block or lose a life",
-      bgColor: "bg-black",
+      bgColor: "bg-[#141824] border border-[#FF3B5C]/50",
       textColor: "text-white",
     },
   ];
@@ -138,13 +137,13 @@ const Information = ({ onClose }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="bg-white rounded-lg w-full max-h-[80vh] overflow-y-auto relative"
+          className="bg-bg-panel border border-line rounded-2xl w-full max-h-[80vh] overflow-y-auto relative"
           ref={contentRef}
         >
           <div className="p-6 space-y-6">
             {/* Developers Section */}
             <div>
-              <h3 className="text-lg font-bold text-purple-600 mb-3">
+              <h3 className="text-lg font-bold text-ink-hi mb-3">
                 Developers:
               </h3>
               <div className="grid grid-cols-2 gap-4">
@@ -154,11 +153,7 @@ const Information = ({ onClose }) => {
                     href={dev.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`flex items-center gap-2 ${
-                      dev.primary
-                        ? "text-blue-600 hover:text-blue-800"
-                        : "text-blue-500 hover:text-blue-700"
-                    } transition-colors`}
+                    className="flex items-center gap-2 text-neon-up hover:text-ink-hi transition-colors"
                   >
                     <Linkedin className="w-4 h-4" />
                     <span className={dev.primary ? "font-medium" : ""}>
@@ -171,7 +166,7 @@ const Information = ({ onClose }) => {
 
             {/* Sound Credits Section */}
             <div>
-              <h3 className="text-lg font-bold text-purple-600 mb-3">
+              <h3 className="text-lg font-bold text-ink-hi mb-3">
                 Sound Effects:
               </h3>
               <div className="space-y-2">
@@ -179,7 +174,7 @@ const Information = ({ onClose }) => {
                   href="https://www.youtube.com/@itayfux1"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-red-600 hover:text-red-800 transition-colors"
+                  className="flex items-center gap-2 text-neon-danger hover:text-ink-hi transition-colors"
                 >
                   <Youtube className="w-4 h-4" />
                   <span>Itay Fux</span>
@@ -189,14 +184,14 @@ const Information = ({ onClose }) => {
 
             {/* Game Blocks Section */}
             <div>
-              <h3 className="text-lg font-bold text-purple-600 mb-3">
+              <h3 className="text-lg font-bold text-ink-hi mb-3">
                 Game Blocks:
               </h3>
               <div className="grid gap-3">
                 {blocks.map((block, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg"
+                    className="flex items-center gap-3 p-2 bg-white/5 border border-white/10 rounded-lg"
                   >
                     <div
                       className={`p-2 rounded-lg shadow-sm ${block.bgColor}`}
@@ -204,10 +199,10 @@ const Information = ({ onClose }) => {
                       {block.icon}
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-800">
+                      <h4 className="font-medium text-ink-hi">
                         {block.name}
                       </h4>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-ink-lo">
                         {block.description}
                       </p>
                     </div>
@@ -218,10 +213,10 @@ const Information = ({ onClose }) => {
           </div>
 
           {/* Fixed Close Button Section */}
-          <div className="sticky bottom-0 border-t bg-white p-4">
+          <div className="sticky bottom-0 border-t border-line bg-bg-panel p-4">
             <button
               onClick={onClose}
-              className="w-full py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="w-full py-2 px-4 bg-neon-double hover:opacity-90 text-white rounded-lg transition-opacity"
             >
               Close
             </button>
@@ -231,7 +226,7 @@ const Information = ({ onClose }) => {
         {/* Fixed Scroll Button */}
         <button
           onClick={() => handleScrollTo(isScrolledDown ? "top" : "bottom")}
-          className="absolute bottom-[4.5rem] right-4 animate-bounce-gentle bg-purple-600 rounded-full p-2 shadow-lg hover:bg-purple-700 transition-colors"
+          className="absolute bottom-[4.5rem] right-4 animate-bounce-gentle bg-white/10 border border-white/15 rounded-full p-2 shadow-lg hover:bg-white/20 transition-colors"
         >
           {isScrolledDown ? (
             <ChevronUp className="w-5 h-5 text-white" />

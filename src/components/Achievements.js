@@ -70,13 +70,13 @@ const Achievements = ({
               key={index}
               className={`w-4 h-4 ${
                 index < completedStars
-                  ? "text-yellow-400 fill-yellow-400"
-                  : "text-gray-300"
+                  ? "text-neon-coin fill-neon-coin"
+                  : "text-white/20"
               }`}
             />
           ))}
         </div>
-        <span className="text-xs text-yellow-600 flex items-center gap-0.5">
+        <span className="text-xs text-neon-coin flex items-center gap-0.5">
           <Coins className="w-3 h-3" />
           {achievement.coinReward}
         </span>
@@ -86,14 +86,14 @@ const Achievements = ({
 
   const getAchievementIcon = (id) => {
     switch (id) {
-      case "balloon-popper":
-        return <Heart className="w-4 h-4" />;
-      case "elite-swiper":
+      case "highScorer":
         return <Crown className="w-4 h-4" />;
-      case "games-played":
-        return <Gamepad2 className="w-4 h-4" />;
-      case "coin-collector":
+      case "coinCollector":
         return <Coins className="w-4 h-4" />;
+      case "balloonPopper":
+        return <Heart className="w-4 h-4" />;
+      case "gamePlayer":
+        return <Gamepad2 className="w-4 h-4" />;
       default:
         return <Trophy className="w-4 h-4" />;
     }
@@ -294,7 +294,7 @@ const Achievements = ({
       {/* Main container - fixed positioning and full width */}
       <div className="fixed top-0 left-0 right-0 z-20">
         {/* Header with coins and navigation */}
-        <div className="bg-gradient-to-r from-blue-400 to-green-500 p-2 shadow-lg w-full">
+        <div className="bg-bg-panel/95 backdrop-blur-md border-b border-line p-2 w-full">
           <div className="flex justify-between items-center max-w-md mx-auto">
             {/* Coins Display (+ optional Back when opened as a standalone screen) */}
             <div className="flex items-center gap-2">
@@ -341,13 +341,13 @@ const Achievements = ({
 
         {/* Expandable Content Area */}
         {activeTab && (
-          <div className="bg-gradient-to-br from-blue-300 via-teal-200 to-green-300 shadow-xl w-full">
+          <div className="bg-bg-panel/95 backdrop-blur-md border-b border-line shadow-2xl w-full">
             <div className="max-w-md mx-auto p-3">
               {activeTab === "achievements" && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-blue-800 flex items-center gap-2">
-                      <Trophy className="w-5 h-5" /> Achievements
+                    <h3 className="text-lg font-bold text-ink-hi flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-neon-coin" /> Achievements
                     </h3>
                   </div>
                   <div className="relative">
@@ -358,18 +358,18 @@ const Achievements = ({
                       {localAchievements?.map((achievement) => (
                         <div
                           key={achievement?.id || Math.random()}
-                          className="p-2 rounded-lg bg-white/50 hover:bg-white/70 transition-all"
+                          className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
                         >
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
-                              <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
+                              <div className="p-1.5 rounded-lg bg-white/10 text-neon-up">
                                 {getAchievementIcon(achievement.id)}
                               </div>
                               <div>
-                                <p className="font-medium text-gray-800 text-sm">
+                                <p className="font-medium text-ink-hi text-sm">
                                   {achievement.title}
                                 </p>
-                                <p className="text-xs text-gray-600">
+                                <p className="text-xs text-ink-lo">
                                   {achievement.description}
                                 </p>
                               </div>
@@ -377,9 +377,9 @@ const Achievements = ({
                             {renderStars(achievement)}
                           </div>
                           <div className="mt-2">
-                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-gradient-to-r from-blue-500 to-green-500"
+                                className="h-full bg-gradient-to-r from-neon-up to-neon-down"
                                 style={{
                                   width: `${Math.min(
                                     getProgress(achievement) || 0,
@@ -389,11 +389,11 @@ const Achievements = ({
                               />
                             </div>
                             <div className="flex justify-between items-center mt-1">
-                              <span className="text-xs text-gray-600">
+                              <span className="text-xs text-ink-lo">
                                 {achievement?.progress || 0} /{" "}
                                 {getNextLevel(achievement) || 0}
                               </span>
-                              {/* <span className="text-xs text-gray-600">
+                              {/* <span className="text-xs text-ink-lo">
                                 {Math.round(getProgress(achievement) || 0)}%
                               </span> */}
                             </div>
@@ -407,7 +407,7 @@ const Achievements = ({
                       onClick={() =>
                         handleScrollTo(isScrolledDown ? "top" : "bottom")
                       }
-                      className="absolute bottom-2 right-2 animate-bounce-gentle bg-blue-600 rounded-full p-1.5 shadow-lg hover:bg-blue-700 transition-colors"
+                      className="absolute bottom-2 right-2 animate-bounce-gentle bg-white/10 border border-white/15 rounded-full p-1.5 hover:bg-white/20 transition-colors"
                     >
                       {isScrolledDown ? (
                         <ChevronUp className="w-4 h-4 text-white" />
@@ -421,41 +421,41 @@ const Achievements = ({
 
               {activeTab === "shop" && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-purple-600 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-ink-hi flex items-center gap-2">
                     <Store className="w-5 h-5" /> Shop
                   </h3>
 
                   {/* Special Items Section */}
-                  <div className="border border-purple-200 rounded-lg overflow-hidden">
+                  <div className="border border-line rounded-lg overflow-hidden">
                     <button
                       onClick={() => toggleSection("specialItems")}
-                      className="w-full flex items-center justify-between p-3 bg-purple-50 hover:bg-purple-100 transition-colors"
+                      className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors"
                     >
-                      <span className="font-medium text-purple-800">
+                      <span className="font-medium text-ink-hi">
                         Special Items
                       </span>
                       {expandedSection === "specialItems" ? (
-                        <ChevronUp className="w-5 h-5 text-purple-600" />
+                        <ChevronUp className="w-5 h-5 text-ink-hi" />
                       ) : (
-                        <ChevronDown className="w-5 h-5 text-purple-600" />
+                        <ChevronDown className="w-5 h-5 text-ink-hi" />
                       )}
                     </button>
                     {expandedSection === "specialItems" && (
-                      <div className="p-4 bg-white space-y-3">
+                      <div className="p-4 bg-black/20 space-y-3">
                         {shopItems.map((item) => (
                           <div
                             key={item.id}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg shadow-md"
+                            className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+                              <div className="p-2 bg-white/10 rounded-lg text-neon-double">
                                 {item.icon}
                               </div>
                               <div>
-                                <h4 className="font-medium text-gray-800">
+                                <h4 className="font-medium text-ink-hi">
                                   {item.name}
                                 </h4>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-ink-lo">
                                   {item.description}
                                 </p>
                               </div>
@@ -465,15 +465,15 @@ const Achievements = ({
                               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors
                                 ${
                                   coins >= item.price
-                                    ? "bg-purple-600 hover:bg-purple-700 text-white"
-                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    ? "bg-neon-double hover:opacity-90 text-white"
+                                    : "bg-white/10 text-ink-lo cursor-not-allowed"
                                 }`}
                               disabled={coins < item.price}
                             >
                               <Coins className="w-4 h-4" />
                               <span>{item.price}</span>
                               {purchasedItems[item.id] > 0 && (
-                                <span className="ml-2 bg-green-100 text-green-800 text-xs px-1 py-0.5 rounded-full">
+                                <span className="ml-2 bg-neon-down/20 text-neon-down text-xs px-1 py-0.5 rounded-full">
                                   x{purchasedItems[item.id]}
                                 </span>
                               )}
@@ -485,23 +485,23 @@ const Achievements = ({
                   </div>
 
                   {/* Themes Section */}
-                  <div className="border border-purple-200 rounded-lg overflow-hidden">
+                  <div className="border border-line rounded-lg overflow-hidden">
                     <button
                       onClick={() => toggleSection("themes")}
-                      className="w-full flex items-center justify-between p-3 bg-purple-50 hover:bg-purple-100 transition-colors"
+                      className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors"
                     >
-                      <span className="font-medium text-purple-800">
+                      <span className="font-medium text-ink-hi">
                         Themes
                       </span>
                       {expandedSection === "themes" ? (
-                        <ChevronUp className="w-5 h-5 text-purple-600" />
+                        <ChevronUp className="w-5 h-5 text-ink-hi" />
                       ) : (
-                        <ChevronDown className="w-5 h-5 text-purple-600" />
+                        <ChevronDown className="w-5 h-5 text-ink-hi" />
                       )}
                     </button>
                     {expandedSection === "themes" && (
-                      <div className="p-4 bg-white">
-                        <p className="text-gray-600 text-sm italic">
+                      <div className="p-4 bg-black/20">
+                        <p className="text-ink-lo text-sm italic">
                           Coming Soon!
                         </p>
                       </div>
@@ -512,55 +512,46 @@ const Achievements = ({
 
               {activeTab === "settings" && (
                 <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-purple-600 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-ink-hi flex items-center gap-2">
                     <Settings className="w-5 h-5" /> Settings
                   </h3>
                   <div className="grid grid-cols-1 gap-2">
                     <button
                       onClick={handleMuteToggle}
-                      className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all"
+                      className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
+                        <div className="p-1.5 rounded-lg bg-white/10 text-neon-up">
                           {soundManager.getMuteState() ? (
                             <VolumeX className="w-4 h-4" />
                           ) : (
                             <Volume2 className="w-4 h-4" />
                           )}
                         </div>
-                        <span className="font-medium text-gray-800 text-sm">
+                        <span className="font-medium text-ink-hi text-sm">
                           {soundManager.getMuteState()
                             ? "Unmute Sound"
                             : "Mute Sound"}
                         </span>
                       </div>
-                      <div
-                        className={`text-gray-400 ${
-                          soundManager.getMuteState() ? "text-red-500" : ""
-                        }`}
-                      >
-                        <Settings className="w-4 h-4" />
-                      </div>
                     </button>
                     <button
                       onClick={handleInformationClick}
-                      className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all"
+                      className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
+                        <div className="p-1.5 rounded-lg bg-white/10 text-neon-up">
                           <Info className="w-4 h-4" />
                         </div>
-                        <span className="font-medium text-gray-800 text-sm">
+                        <span className="font-medium text-ink-hi text-sm">
                           Information
                         </span>
                       </div>
-                      <div className="text-gray-400">
-                        <Settings className="w-4 h-4" />
-                      </div>
+                      <ChevronDown className="w-4 h-4 text-ink-lo -rotate-90" />
                     </button>
 
                     {/* Even more simplified Version Display */}
-                    <div className="mt-4 text-right text-sm text-gray-500">
+                    <div className="mt-4 text-right text-sm text-ink-lo">
                       Version {version}
                     </div>
                   </div>
