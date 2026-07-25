@@ -162,7 +162,7 @@ export function minimizeApp() {
  */
 export async function initNative() {
   if (!isNative) return;
-  setStatusBarForBackground("#f8f9fa");
+  setStatusBarForBackground("#0E1117");
   try {
     await SplashScreen.hide();
   } catch (error) {

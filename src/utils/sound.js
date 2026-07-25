@@ -13,7 +13,9 @@ class SoundManager {
     const soundFiles = {
       background: "/assets/sounds/background.mp3",
       tap: "/assets/sounds/tap.mp3",
-      collect: "/assets/sounds/collect.mp3",
+      // collect.mp3 never shipped — reuse the satisfying balloon pop so coin /
+      // extra-life pickups aren't silent.
+      collect: "/assets/sounds/balloon_pop.wav",
       avoidtap: "/assets/sounds/avoidtap.mp3",
       shop_buying: "/assets/sounds/shop_buying.wav",
       shop_inside: "/assets/sounds/shop_inside.wav",

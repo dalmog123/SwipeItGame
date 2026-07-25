@@ -569,31 +569,15 @@ export default function GameOver({
 
   useEffect(() => {
     if (achievementQueue.length > 0 && !currentAchievement) {
-      const nextAchievement = achievementQueue[0];
-      
-      // Play achievement sound when showing notification
-      try {
-        console.log("Playing achievement sound");
-        soundManager.play("achievement_unlock", { volume: 1.0 });
-      } catch (error) {
-        console.error("Error playing achievement sound:", error);
-      }
-      
-      setCurrentAchievement(nextAchievement);
+      // The unlock sound is played once by AchievementsNotification when the
+      // toast appears — don't fire it here too (it used to play up to 3×).
+      setCurrentAchievement(achievementQueue[0]);
       setAchievementQueue((prev) => prev.slice(1));
     }
   }, [achievementQueue, currentAchievement]);
 
   useEffect(() => {
     if (currentAchievement) {
-      // Play achievement sound when notification appears
-      try {
-        console.log("Playing achievement sound for:", currentAchievement.achievement);
-        soundManager.play("achievement_unlock", { volume: 1.0 });
-      } catch (error) {
-        console.error("Error playing achievement sound:", error);
-      }
-
       const timer = setTimeout(() => {
         setCurrentAchievement(null);
       }, 6000); // 6 seconds
@@ -661,17 +645,6 @@ export default function GameOver({
 
     return () => clearTimeout(t);
   }, [isNewRecord]);
-
-  useEffect(() => {
-    if (achievementQueue.length > 0 && !currentAchievement) {
-      const nextAchievement = achievementQueue[0];
-      // Check if this achievement notification has already been shown
-      const achievementKey = `${nextAchievement.id}-${nextAchievement.level}`;
-
-      setCurrentAchievement(nextAchievement);
-      setAchievementQueue((prev) => prev.slice(1));
-    }
-  }, [achievementQueue, currentAchievement]);
 
   // console.log(coins, "in gameover");
 

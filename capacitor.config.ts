@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: 'com.kipi.swipeitgame',
   appName: 'Swipe It!',
   webDir: 'build',
-  backgroundColor: '#f8f9fa',
+  backgroundColor: '#0E1117',
   ios: {
     // The game manages its own layout; kill WebView rubber-band scrolling
     scrollEnabled: false,
@@ -15,15 +15,15 @@ const config: CapacitorConfig = {
       // Splash stays up until the game calls SplashScreen.hide() (initNative)
       launchAutoHide: false,
       launchFadeOutDuration: 200,
-      backgroundColor: '#f8f9fa',
+      backgroundColor: '#0E1117',
       showSpinner: false,
       splashFullScreen: true,
       splashImmersive: false,
     },
     StatusBar: {
-      // Light style = dark icons, matching the light launch background
-      style: 'LIGHT',
-      backgroundColor: '#f8f9fa',
+      // Dark style = light icons, matching the dark neon launch background
+      style: 'DARK',
+      backgroundColor: '#0E1117',
     },
   },
 };

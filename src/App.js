@@ -605,11 +605,13 @@ export default function SwipeGame() {
     (blockId, blockType) => {
       soundManager.initialize();
 
-      // Native haptic feedback: rare pickups get a stronger "success" pulse
+      // Native haptic feedback + sound: rare pickups get a stronger "success"
+      // pulse; ordinary blocks get a light tick (the previously-unused tap.mp3).
       if (blockType === "coins" || blockType === "extraLive") {
         haptics.success();
       } else {
         haptics.light();
+        soundManager.play("tap", { volume: 0.35 });
       }
 
       setGameState((prev) => {
@@ -936,13 +938,11 @@ export default function SwipeGame() {
     }
   }, [gameState.score]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep the native status bar readable against the current background
-  // (game-over screen uses a blue gradient, otherwise the score theme color)
+  // Keep the native status bar readable — every screen is dark now, so track
+  // the current score-tier background (game-over included).
   useEffect(() => {
-    setStatusBarForBackground(
-      gameState.isGameOver ? "#60a5fa" : currentTheme.background
-    );
-  }, [gameState.isGameOver, currentTheme]);
+    setStatusBarForBackground(currentTheme.background);
+  }, [currentTheme]);
 
   // Add this effect after your other useEffects
   useEffect(() => {
@@ -1321,7 +1321,17 @@ export default function SwipeGame() {
         )}
 
         {/* Add the pause menu */}
-        {isPaused && <PauseMenu onResume={handleResume} onQuit={handleQuit} />}
+        {isPaused && (
+          <PauseMenu
+            onResume={handleResume}
+            onRestart={() => {
+              setIsPaused(false);
+              resetGame();
+            }}
+            onHome={handleGoHome}
+            score={gameState.score}
+          />
+        )}
 
         {/* Return-to-Home affordance on the game-over screen (a proper one
             arrives with the Results-screen redesign in a later phase) */}
